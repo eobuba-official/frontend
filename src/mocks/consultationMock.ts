@@ -136,6 +136,13 @@ export const mockChecklist: ChecklistResult = {
       required: false,
       condition: '가족이 대신 방문하는 경우',
     },
+    {
+      itemCode: 'FAMILY_CERT',
+      name: '가족관계증명서',
+      easyDescription: '가족임을 증명하는 종이',
+      required: false,
+      condition: '가족이 대신 방문하는 경우',
+    },
   ],
 }
 
@@ -159,6 +166,44 @@ export const mockBranchRecommendations: BranchRecommendationResult = {
       expectedWaitMinutes: 5,
       score: 91.5,
       sentence: '내일 오전 10시에 종로지점 방문을 추천해요. 대기가 가장 적은 시간이에요.',
+    },
+    {
+      rank: 2,
+      branch: {
+        branchId: 87,
+        name: 'KB국민은행 광화문지점',
+        address: '서울 종로구 세종대로 2',
+        phone: '02-000-0001',
+        distanceKm: 0.8,
+      },
+      visitTime: {
+        date: '2026-09-06',
+        dayLabel: '내일',
+        timeSlot: '14:00-15:00',
+        timeLabel: '오후 2시',
+      },
+      expectedWaitMinutes: 12,
+      score: 84,
+      sentence: '내일 오후 2시 광화문지점도 좋아요. 거리가 가장 가까워요.',
+    },
+    {
+      rank: 3,
+      branch: {
+        branchId: 103,
+        name: 'KB국민은행 종로지점',
+        address: '서울 종로구 종로 1',
+        phone: '02-000-0000',
+        distanceKm: 1.2,
+      },
+      visitTime: {
+        date: '2026-09-05',
+        dayLabel: '오늘',
+        timeSlot: '15:00-16:00',
+        timeLabel: '오후 3시',
+      },
+      expectedWaitMinutes: 25,
+      score: 71,
+      sentence: '오늘 꼭 가야 한다면 오후 3시 종로지점이 그나마 한가해요.',
     },
   ],
   weights: { wait: 0.7, distance: 0.3 },
