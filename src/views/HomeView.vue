@@ -4,79 +4,125 @@ import { Keyboard, Mic, ShieldAlert } from '@lucide/vue'
 import { useRouter } from 'vue-router'
 import AppScreen from '@/components/common/AppScreen.vue'
 import { routePaths } from '@/router/routePaths'
+import { speechService } from '@/services/speechService'
 import { useConsultationFlowStore } from '@/stores/consultationFlow'
+import { encodeWav, mergeAudioChunks } from '@/utils/wavEncoder'
 
 const router = useRouter()
 const consultationFlow = useConsultationFlowStore()
 const isListening = ref(false)
+const isProcessing = ref(false)
 const micError = ref('')
 const barLevels = ref([0.38, 0.64, 0.88, 0.52, 0.7, 0.44])
 
 let animationFrame = 0
-let recognition: SpeechRecognition | null = null
+let mediaStream: MediaStream | null = null
+let audioContext: AudioContext | null = null
+let sourceNode: MediaStreamAudioSourceNode | null = null
+let processorNode: ScriptProcessorNode | null = null
+let silentGainNode: GainNode | null = null
+let audioChunks: Float32Array[] = []
 
-const micButtonLabel = computed(() =>
-  isListening.value ? '듣고 있어요. 그만하시려면 다시 눌러주세요' : '동그라미를 누르고 말로 은행 업무를 알려주세요',
-)
+const micButtonLabel = computed(() => {
+  if (isProcessing.value) return '확인하고 있어요. 잠시만 기다려주세요'
+  return isListening.value ? '듣고 있어요. 그만하시려면 다시 눌러주세요' : '동그라미를 누르고 말로 은행 업무를 알려주세요'
+})
 
-function handleVoiceStart() {
+async function handleVoiceStart() {
+  if (isProcessing.value) return
+
   if (isListening.value) {
-    recognition?.stop()
-    stopMicrophone()
+    await stopRecordingAndTranscribe()
     return
   }
 
-  isListening.value = true
   micError.value = ''
-  startFallbackMotion()
-  startSpeechRecognition()
+  await startRecording()
 }
 
-function startSpeechRecognition() {
-  const RecognitionCtor = window.SpeechRecognition ?? window.webkitSpeechRecognition
-
-  if (!RecognitionCtor) {
-    micError.value = '이 브라우저는 음성 인식을 지원하지 않아요. 글자로 알려주세요.'
-    stopMicrophone()
+async function startRecording() {
+  try {
+    mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true })
+  } catch (error) {
+    micError.value = mapGetUserMediaError(error)
     return
   }
 
-  recognition = new RecognitionCtor()
-  recognition.lang = 'ko-KR'
-  recognition.continuous = false
-  recognition.interimResults = false
-  recognition.maxAlternatives = 1
+  audioContext = new AudioContext()
+  sourceNode = audioContext.createMediaStreamSource(mediaStream)
+  processorNode = audioContext.createScriptProcessor(4096, 1, 1)
+  silentGainNode = audioContext.createGain()
+  silentGainNode.gain.value = 0
 
-  recognition.onresult = (event) => {
-    const result = event.results[0]?.[0]
-    if (!result) return
+  audioChunks = []
+  processorNode.onaudioprocess = (event) => {
+    audioChunks.push(new Float32Array(event.inputBuffer.getChannelData(0)))
+  }
 
+  sourceNode.connect(processorNode)
+  processorNode.connect(silentGainNode)
+  silentGainNode.connect(audioContext.destination)
+
+  isListening.value = true
+  startFallbackMotion()
+}
+
+async function stopRecordingAndTranscribe() {
+  const samples = mergeAudioChunks(audioChunks)
+  const sampleRate = audioContext?.sampleRate ?? 16000
+  closeAudioGraph()
+  isListening.value = false
+
+  if (samples.length === 0) {
+    micError.value = '말씀이 들리지 않았어요. 다시 눌러서 말씀해 주세요.'
+    return
+  }
+
+  isProcessing.value = true
+
+  try {
+    const wavBlob = encodeWav(samples, sampleRate)
+    const result = await speechService.transcribe(wavBlob)
     consultationFlow.setUtterance({
       utterance: result.transcript,
       inputMethod: 'VOICE',
-      sttConfidence: result.confidence,
+      sttConfidence: result.sttConfidence,
     })
-    stopMicrophone()
-    void router.push(routePaths.utteranceConfirm)
+    await router.push(routePaths.utteranceConfirm)
+  } catch (error) {
+    micError.value = error instanceof Error ? error.message : '잘 듣지 못했어요. 다시 눌러서 말씀해 주세요.'
+  } finally {
+    isProcessing.value = false
   }
+}
 
-  recognition.onerror = () => {
-    micError.value = '잘 듣지 못했어요. 다시 눌러서 말씀해 주세요.'
-    stopMicrophone()
+function mapGetUserMediaError(error: unknown): string {
+  const name = error instanceof DOMException ? error.name : ''
+  switch (name) {
+    case 'NotAllowedError':
+    case 'SecurityError':
+      return '마이크 권한이 꺼져 있어요. 브라우저 주소창의 마이크 아이콘에서 허용해 주세요.'
+    case 'NotFoundError':
+      return '마이크를 찾을 수 없어요. 마이크가 연결되어 있는지 확인해 주세요.'
+    default:
+      return '마이크를 시작하지 못했어요. 다시 눌러주세요.'
   }
+}
 
-  recognition.onend = () => {
-    if (isListening.value) {
-      stopMicrophone()
-    }
-  }
+function closeAudioGraph() {
+  window.cancelAnimationFrame(animationFrame)
+  processorNode?.disconnect()
+  sourceNode?.disconnect()
+  silentGainNode?.disconnect()
+  mediaStream?.getTracks().forEach((track) => track.stop())
+  void audioContext?.close()
 
-  try {
-    recognition.start()
-  } catch {
-    micError.value = '마이크를 시작하지 못했어요. 다시 눌러주세요.'
-    stopMicrophone()
-  }
+  processorNode = null
+  sourceNode = null
+  silentGainNode = null
+  mediaStream = null
+  audioContext = null
+  barLevels.value = [0.38, 0.64, 0.88, 0.52, 0.7, 0.44]
 }
 
 function goTextInput() {
@@ -105,15 +151,7 @@ function startFallbackMotion() {
   tick()
 }
 
-function stopMicrophone() {
-  window.cancelAnimationFrame(animationFrame)
-  recognition?.abort()
-  recognition = null
-  isListening.value = false
-  barLevels.value = [0.38, 0.64, 0.88, 0.52, 0.7, 0.44]
-}
-
-onBeforeUnmount(stopMicrophone)
+onBeforeUnmount(closeAudioGraph)
 </script>
 
 <template>
@@ -140,6 +178,7 @@ onBeforeUnmount(stopMicrophone)
           :class="{ 'voice-orb--listening': isListening }"
           type="button"
           :aria-label="micButtonLabel"
+          :disabled="isProcessing"
           @click="handleVoiceStart"
         >
           <span class="voice-orb__bars voice-orb__bars--left" aria-hidden="true">
@@ -156,8 +195,18 @@ onBeforeUnmount(stopMicrophone)
         </button>
 
         <div class="home__copy">
-          <h2 id="home-title">{{ isListening ? '듣고 있어요...' : '무엇을 도와드릴까요?' }}</h2>
-          <p>{{ isListening ? '끝나면 동그라미를 다시 눌러주세요' : '동그라미를 누르고 편하게 말씀하세요' }}</p>
+          <h2 id="home-title">
+            {{ isProcessing ? '확인하고 있어요...' : isListening ? '듣고 있어요...' : '무엇을 도와드릴까요?' }}
+          </h2>
+          <p>
+            {{
+              isProcessing
+                ? '잠시만 기다려주세요'
+                : isListening
+                  ? '끝나면 동그라미를 다시 눌러주세요'
+                  : '동그라미를 누르고 편하게 말씀하세요'
+            }}
+          </p>
           <small v-if="micError">{{ micError }}</small>
         </div>
       </section>
@@ -275,6 +324,11 @@ onBeforeUnmount(stopMicrophone)
     inset 0 18px 55px rgba(255, 255, 255, 0.45);
   cursor: pointer;
   isolation: isolate;
+}
+
+.voice-orb:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
 }
 
 .voice-orb::before,

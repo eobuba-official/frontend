@@ -267,3 +267,13 @@ export interface ConsultationHistoryItem {
   confidence: number | null
   createdAt: string
 }
+
+export type TranscriptionSource = 'CLOVA_CSR' | 'WEB_SPEECH_FALLBACK'
+
+export interface SpeechTranscriptionResult {
+  transcript: string
+  source: TranscriptionSource
+  browserTranscript: string | null
+  sttConfidence: number | null
+  recheckNeeded: boolean
+}
