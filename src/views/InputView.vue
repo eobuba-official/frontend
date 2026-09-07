@@ -1,16 +1,18 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { ChevronRight, CreditCard, PiggyBank, UserRoundPlus } from '@lucide/vue'
 import { useRouter } from 'vue-router'
 import AppScreen from '@/components/common/AppScreen.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import FlowHeader from '@/components/common/FlowHeader.vue'
 import { routePaths } from '@/router/routePaths'
-import { useConsultationStore } from '@/stores/consultation'
+import { useConsultationFlowStore } from '@/stores/consultationFlow'
 
 const router = useRouter()
-const consultationStore = useConsultationStore()
-const requestText = ref('')
+const consultationFlow = useConsultationFlowStore()
+const requestText = ref(consultationFlow.utterance)
+
+const canSubmit = computed(() => requestText.value.trim().length > 0)
 
 const popularTasks = [
   { label: '통장 재발급', icon: CreditCard },
@@ -23,14 +25,13 @@ function chooseTask(taskName: string) {
   requestText.value = taskName
 }
 
-async function submitInput() {
-  if (!requestText.value.trim()) {
+function submitInput() {
+  if (!canSubmit.value) {
     return
   }
 
-  consultationStore.setUtterance(requestText.value, 'TEXT')
-  await consultationStore.analyzeCurrentUtterance()
-  await router.push({ path: routePaths.utteranceConfirm, query: { method: 'text' } })
+  consultationFlow.setUtterance({ utterance: requestText.value.trim(), inputMethod: 'TEXT' })
+  void router.push(routePaths.utteranceConfirm)
 }
 </script>
 
@@ -69,9 +70,7 @@ async function submitInput() {
     </section>
 
     <template #footer>
-      <BaseButton block :disabled="!requestText.trim() || consultationStore.isAnalyzing" @click="submitInput">
-        {{ consultationStore.isAnalyzing ? '확인 중...' : '확인하기' }}
-      </BaseButton>
+      <BaseButton block :disabled="!canSubmit" @click="submitInput">확인하기</BaseButton>
     </template>
   </AppScreen>
 </template>

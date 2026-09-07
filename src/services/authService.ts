@@ -1,16 +1,17 @@
+import axios from 'axios'
 import type {
-  ApiResponse,
   Guardian,
+  MeResult,
   SignupRequest,
   SignupResult,
   SmsRequest,
   SmsRequestResult,
   SmsVerifyRequest,
   SmsVerifyResult,
-  User,
 } from '@/api/types'
-import axios from 'axios'
 import { apiClient, setAccessToken } from '@/api/client'
+
+const forceMockApi = import.meta.env.VITE_USE_MOCK_API === 'true'
 
 const mockUser = {
   userId: 1,
@@ -31,39 +32,30 @@ function delay<T>(value: T, ms = 250): Promise<T> {
   return new Promise((resolve) => window.setTimeout(() => resolve(value), ms))
 }
 
-const useMockApi = import.meta.env.VITE_USE_MOCK_API !== 'false'
-
-async function unwrapApiResponse<T>(request: Promise<{ data: ApiResponse<T> }>) {
-  const response = (await request).data
-
-  if (response.success) {
-    return response.data
-  }
-
-  throw new Error(response.error.message)
-}
-
 async function withMockFallback<T>(request: () => Promise<T>, fallback: () => Promise<T>) {
-  if (useMockApi) {
+  if (forceMockApi) {
     return fallback()
   }
 
   try {
     return await request()
   } catch (error) {
-    if (axios.isAxiosError(error) && error.response && error.response.status < 500 && error.response.status !== 404) {
-      throw error
+    if (axios.isAxiosError(error) && !error.response) {
+      console.warn('[mock fallback] API request failed, using mock data.', error)
+      return fallback()
     }
 
-    console.warn('[mock fallback] API request failed, using mock data.', error)
-    return fallback()
+    throw error
   }
 }
 
 export const authService = {
-  requestSms(_request: SmsRequest): Promise<SmsRequestResult> {
+  requestSms(request: SmsRequest): Promise<SmsRequestResult> {
     return withMockFallback(
-      () => unwrapApiResponse(apiClient.post<ApiResponse<SmsRequestResult>>('/auth/sms/request', _request)),
+      async () => {
+        const response = await apiClient.post<SmsRequestResult>('/auth/sms/request', request)
+        return response.data
+      },
       () =>
         delay({
           expiresInSeconds: 180,
@@ -75,15 +67,13 @@ export const authService = {
   verifySms(request: SmsVerifyRequest): Promise<SmsVerifyResult> {
     return withMockFallback(
       async () => {
-        const result = await unwrapApiResponse(
-          apiClient.post<ApiResponse<SmsVerifyResult>>('/auth/sms/verify', request),
-        )
+        const response = await apiClient.post<SmsVerifyResult>('/auth/sms/verify', request)
 
-        if (result.accessToken) {
-          setAccessToken(result.accessToken)
+        if (response.data.accessToken) {
+          setAccessToken(response.data.accessToken)
         }
 
-        return result
+        return response.data
       },
       () => {
         if (request.code !== '123456') {
@@ -96,20 +86,19 @@ export const authService = {
         return delay({
           registered: true,
           accessToken,
+          signupToken: null,
         })
       },
     )
   },
 
-  signup(_request: SignupRequest): Promise<SignupResult> {
+  signup(request: SignupRequest): Promise<SignupResult> {
     return withMockFallback(
       async () => {
-        const result = await unwrapApiResponse(
-          apiClient.post<ApiResponse<SignupResult>>('/auth/signup', _request),
-        )
-        setAccessToken(result.accessToken)
+        const response = await apiClient.post<SignupResult>('/auth/signup', request)
+        setAccessToken(response.data.accessToken)
 
-        return result
+        return response.data
       },
       () => {
         const accessToken = 'mock-access-token'
@@ -123,9 +112,12 @@ export const authService = {
     )
   },
 
-  getMe(): Promise<User & { guardians: Guardian[] }> {
+  getMe(): Promise<MeResult> {
     return withMockFallback(
-      () => unwrapApiResponse(apiClient.get<ApiResponse<User & { guardians: Guardian[] }>>('/users/me')),
+      async () => {
+        const response = await apiClient.get<MeResult>('/users/me')
+        return response.data
+      },
       () =>
         delay({
           ...mockUser,

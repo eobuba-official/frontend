@@ -53,11 +53,13 @@ export interface User {
   phoneNumber: string
 }
 
+export type GuardianRelation = '아들' | '딸' | '배우자' | '기타'
+
 export interface Guardian {
   guardianId?: number
   name: string
   phoneNumber: string
-  relation: '아들' | '딸' | '배우자' | '기타'
+  relation: GuardianRelation
 }
 
 export interface SmsRequest {
@@ -77,7 +79,7 @@ export interface SmsVerifyRequest {
 export interface SmsVerifyResult {
   registered: boolean
   accessToken: string | null
-  signupToken?: string
+  signupToken: string | null
 }
 
 export interface SignupRequest {
@@ -89,6 +91,10 @@ export interface SignupRequest {
 export interface SignupResult {
   userId: number
   accessToken: string
+}
+
+export interface MeResult extends User {
+  guardians: Guardian[]
 }
 
 export interface AnalyzeRequest {
@@ -103,7 +109,7 @@ export interface AnalyzeResult {
   fraudCheck: FraudCheck
   classification: Classification
   visitDecision: VisitDecision | null
-  guidance?: string
+  guidance?: string | null
 }
 
 export interface FraudCheck {
@@ -220,6 +226,8 @@ export interface BranchRecommendationQuery {
   limit?: number
 }
 
+export type CongestionSource = 'MOCK' | 'FALLBACK' | 'SEOUL_RTD'
+
 export interface BranchRecommendationResult {
   recommendations: BranchRecommendation[]
   weights: {
@@ -233,7 +241,7 @@ export interface BranchRecommendation {
   branch: Branch
   visitTime: VisitTime
   expectedWaitMinutes: number
-  congestionSource: 'MOCK' | 'SEOUL_RTD'
+  congestionSource: CongestionSource
   score: number
   sentence: string
 }
@@ -243,7 +251,7 @@ export interface Branch {
   name: string
   address: string
   phone: string
-  distanceKm: number
+  distanceKm: number | null
 }
 
 export interface VisitTime {

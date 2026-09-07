@@ -6,9 +6,12 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import FlowHeader from '@/components/common/FlowHeader.vue'
 import { mockBranchRecommendations } from '@/mocks'
 import { routePaths } from '@/router/routePaths'
+import { useConsultationFlowStore } from '@/stores/consultationFlow'
+import type { BranchRecommendation } from '@/api/types'
 
 const router = useRouter()
-const selectedBranch = mockBranchRecommendations.recommendations[0]
+const consultationFlow = useConsultationFlowStore()
+const selectedBranch = mockBranchRecommendations.recommendations[0] as BranchRecommendation
 
 const mapBranches = [
   { name: 'KB국민은행 강남지점', x: 26, y: 46, selected: true },
@@ -16,6 +19,11 @@ const mapBranches = [
   { name: 'KB국민은행 역삼지점', x: 36, y: 72, selected: false },
   { name: 'KB국민은행 삼성지점', x: 78, y: 66, selected: false },
 ]
+
+function selectBranch() {
+  consultationFlow.setSelectedBranch(selectedBranch)
+  void router.push(routePaths.visitSummary)
+}
 </script>
 
 <template>
@@ -59,7 +67,7 @@ const mapBranches = [
           <h2>{{ selectedBranch.branch.name.replace('종로', '강남') }}</h2>
           <p>
             <MapPin :size="20" :stroke-width="2.2" />
-            {{ selectedBranch.branch.distanceKm.toFixed(1).replace('1.2', '0.7') }}km
+            {{ selectedBranch.branch.distanceKm?.toFixed(1).replace('1.2', '0.7') ?? '0.7' }}km
             <span></span>
             서울특별시 강남구 강남대로 372
           </p>
@@ -72,7 +80,7 @@ const mapBranches = [
           <BaseButton variant="ghost" block @click="router.push(routePaths.branchDetail)">
             상세보기
           </BaseButton>
-          <BaseButton block @click="router.push(routePaths.visitSummary)">이 지점 선택</BaseButton>
+          <BaseButton block @click="selectBranch">이 지점 선택</BaseButton>
         </div>
       </article>
     </section>

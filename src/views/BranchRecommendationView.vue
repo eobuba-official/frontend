@@ -1,14 +1,73 @@
 <script setup lang="ts">
+import { computed, onMounted, ref } from 'vue'
 import { Clock, MapPin } from '@lucide/vue'
 import { useRouter } from 'vue-router'
 import AppScreen from '@/components/common/AppScreen.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import FlowHeader from '@/components/common/FlowHeader.vue'
-import { mockBranchRecommendations } from '@/mocks'
 import { routePaths } from '@/router/routePaths'
+import { consultationService } from '@/services/consultationService'
+import { useConsultationFlowStore } from '@/stores/consultationFlow'
+import type { BranchRecommendation } from '@/api/types'
+
+const FALLBACK_LOCATION = { lat: 37.5665, lng: 126.978 }
+const GEOLOCATION_TIMEOUT_MS = 5000
 
 const router = useRouter()
-const recommendations = mockBranchRecommendations.recommendations
+const consultationFlow = useConsultationFlowStore()
+
+if (!consultationFlow.consultationId || !consultationFlow.task) {
+  router.replace(routePaths.home)
+}
+
+const recommendations = ref<BranchRecommendation[]>([])
+const selectedRank = ref<number | null>(null)
+const isLoading = ref(true)
+const errorMessage = ref('')
+
+const selected = computed(() => recommendations.value.find((item) => item.rank === selectedRank.value) ?? null)
+
+function getCurrentLocation(): Promise<{ lat: number; lng: number }> {
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) {
+      resolve(FALLBACK_LOCATION)
+      return
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => resolve({ lat: position.coords.latitude, lng: position.coords.longitude }),
+      () => resolve(FALLBACK_LOCATION),
+      { timeout: GEOLOCATION_TIMEOUT_MS },
+    )
+  })
+}
+
+onMounted(async () => {
+  if (!consultationFlow.consultationId || !consultationFlow.task) return
+
+  try {
+    const { lat, lng } = await getCurrentLocation()
+    const result = await consultationService.getBranchRecommendations({
+      consultationId: consultationFlow.consultationId,
+      taskTypeCode: consultationFlow.task.taskTypeCode,
+      lat,
+      lng,
+    })
+    recommendations.value = result.recommendations
+    selectedRank.value = result.recommendations[0]?.rank ?? null
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : '지점을 불러오지 못했어요.'
+  } finally {
+    isLoading.value = false
+  }
+})
+
+function handleConfirm() {
+  if (!selected.value) return
+
+  consultationFlow.setSelectedBranch(selected.value)
+  void router.push(routePaths.visitSummary)
+}
 </script>
 
 <template>
@@ -19,16 +78,18 @@ const recommendations = mockBranchRecommendations.recommendations
 
     <section class="branches">
       <h1>이렇게 가시는 걸<br />추천드려요</h1>
-      <p>가까운 시간과 적은 대기 시간을 순서로 보여드려요.</p>
+      <p v-if="isLoading">가까운 지점과 시간을 찾고 있어요.</p>
+      <p v-else-if="!errorMessage">가까운 시간과 적은 대기 시간을 순서로 보여드려요.</p>
+      <p v-else class="branches__error">{{ errorMessage }}</p>
 
       <div class="branches__list">
         <button
           v-for="item in recommendations"
           :key="`${item.branch.branchId}-${item.visitTime.timeSlot}`"
           class="branch-card"
-          :class="{ 'branch-card--best': item.rank === 1 }"
+          :class="{ 'branch-card--best': selectedRank === item.rank }"
           type="button"
-          @click="router.push(routePaths.branchDetail)"
+          @click="selectedRank = item.rank"
         >
           <span class="branch-card__rank">{{ item.rank }}</span>
           <span class="branch-card__body">
@@ -39,10 +100,10 @@ const recommendations = mockBranchRecommendations.recommendations
             </small>
             <small>
               <MapPin :size="15" :stroke-width="2.2" />
-              {{ item.branch.distanceKm }}km
+              {{ item.branch.distanceKm != null ? `${item.branch.distanceKm}km` : item.branch.address }}
             </small>
           </span>
-          <em v-if="item.rank === 1">추천</em>
+          <em v-if="selectedRank === item.rank">선택됨</em>
         </button>
       </div>
     </section>
@@ -50,7 +111,7 @@ const recommendations = mockBranchRecommendations.recommendations
     <template #footer>
       <div class="branches__footer">
         <BaseButton variant="ghost" block @click="router.push(routePaths.branchMap)">지도에서 보기</BaseButton>
-        <BaseButton block @click="router.push(routePaths.visitSummary)">이 시간으로 정하기</BaseButton>
+        <BaseButton block :disabled="!selected" @click="handleConfirm">이 시간으로 정하기</BaseButton>
       </div>
     </template>
   </AppScreen>
@@ -72,6 +133,10 @@ const recommendations = mockBranchRecommendations.recommendations
 
 .branches > p {
   color: var(--color-ink-soft);
+}
+
+.branches__error {
+  color: var(--color-alert);
 }
 
 .branches__list {

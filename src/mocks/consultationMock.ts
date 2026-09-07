@@ -16,8 +16,8 @@ export const mockTaskTypes: TaskType[] = [
   },
   {
     taskTypeCode: 'DEPOSIT_EARLY_CLOSE',
-    name: '예금 중도해지',
-    easyDescription: '만기 전에 돈을 찾는 것',
+    name: '예금 / 적금 해지',
+    easyDescription: '만기 전에 돈을 찾는 일',
     defaultVisitDecision: 'CHECK_NEEDED',
   },
   {
@@ -40,7 +40,7 @@ export const mockTaskTypes: TaskType[] = [
   },
   {
     taskTypeCode: 'BALANCE_INQUIRY',
-    name: '잔액·거래내역 조회',
+    name: '잔액 / 거래내역 조회',
     easyDescription: '통장에 얼마 있는지 보는 일',
     defaultVisitDecision: 'NO_VISIT',
   },
@@ -196,7 +196,7 @@ export const mockBranchRecommendations: BranchRecommendationResult = {
         distanceKm: 1.2,
       },
       visitTime: {
-        date: '2026-09-06',
+        date: '2026-09-08',
         dayLabel: '내일',
         timeSlot: '10:00-11:00',
         timeLabel: '오전 10시',
@@ -216,7 +216,7 @@ export const mockBranchRecommendations: BranchRecommendationResult = {
         distanceKm: 0.8,
       },
       visitTime: {
-        date: '2026-09-06',
+        date: '2026-09-08',
         dayLabel: '내일',
         timeSlot: '14:00-15:00',
         timeLabel: '오후 2시',
@@ -236,7 +236,7 @@ export const mockBranchRecommendations: BranchRecommendationResult = {
         distanceKm: 1.2,
       },
       visitTime: {
-        date: '2026-09-05',
+        date: '2026-09-07',
         dayLabel: '오늘',
         timeSlot: '15:00-16:00',
         timeLabel: '오후 3시',
@@ -255,7 +255,7 @@ export const mockTaskSelectionResult: TaskSelectionResult = {
   status: 'TASK_CONFIRMED',
   task: mockTaskTypes[1] ?? {
     taskTypeCode: 'DEPOSIT_EARLY_CLOSE',
-    name: '예금 중도해지',
+    name: '예금 / 적금 해지',
     easyDescription: '만기 전에 돈을 찾는 것',
   },
   visitDecision: {

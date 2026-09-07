@@ -4,22 +4,24 @@ import { Keyboard, Mic, Settings, ShieldAlert } from '@lucide/vue'
 import { useRouter } from 'vue-router'
 import AppScreen from '@/components/common/AppScreen.vue'
 import { routePaths } from '@/router/routePaths'
-import { useConsultationStore } from '@/stores/consultation'
+import { useConsultationFlowStore } from '@/stores/consultationFlow'
+
+const VOICE_FALLBACK_UTTERANCE = '통장을 잃어버렸는데 다시 만들고 싶어'
 
 const router = useRouter()
-const consultationStore = useConsultationStore()
+const consultationFlow = useConsultationFlowStore()
 const userName = '김부바'
 const isListening = ref(false)
 const micError = ref('')
 const barLevels = ref([0.38, 0.64, 0.88, 0.52, 0.7, 0.44])
 
-let audioContext: AudioContext | null = null
-let analyser: AnalyserNode | null = null
-let stream: MediaStream | null = null
 let animationFrame = 0
+let recognition: SpeechRecognition | null = null
+let pendingTranscript = ''
+let isCompleting = false
 
 const micButtonLabel = computed(() =>
-  isListening.value ? '듣고 있어요. 천천히 말씀해 주세요' : '동그라미를 누르고 말로 은행 업무를 알려주세요',
+  isListening.value ? '듣고 있어요. 그만하시려면 다시 눌러주세요' : '동그라미를 누르고 말로 은행 업무를 알려주세요',
 )
 const todayLabel = computed(() => {
   const today = new Date()
@@ -38,27 +40,82 @@ const micCoreScale = computed(() => {
   return 1 + Math.min(0.1, averageLevel * 0.1)
 })
 
-async function handleVoiceStart() {
+function handleVoiceStart() {
   if (isListening.value) {
-    stopMicrophone()
-    await consultationStore.startMockVoiceConsultation()
-    await router.push({ path: routePaths.utteranceConfirm, query: { method: 'voice' } })
+    completeVoiceInput()
     return
   }
 
+  pendingTranscript = ''
+  isCompleting = false
   isListening.value = true
   micError.value = ''
+  startFallbackMotion()
+  startSpeechRecognition()
+}
+
+function startSpeechRecognition() {
+  const RecognitionCtor = window.SpeechRecognition ?? window.webkitSpeechRecognition
+
+  if (!RecognitionCtor) {
+    return
+  }
+
+  recognition = new RecognitionCtor()
+  recognition.lang = 'ko-KR'
+  recognition.continuous = true
+  recognition.interimResults = true
+  recognition.maxAlternatives = 1
+
+  recognition.onresult = (event) => {
+    const results = Array.from(event.results)
+    const transcript = results
+      .map((result) => result[0]?.transcript ?? '')
+      .join(' ')
+      .trim()
+
+    if (transcript) {
+      pendingTranscript = transcript
+    }
+  }
+
+  recognition.onerror = () => {
+    micError.value = '잘 듣지 못했어요. 다시 눌러서 말씀해 주세요.'
+    stopMicrophone()
+  }
+
+  recognition.onend = () => {
+    if (isListening.value && pendingTranscript.trim() && !isCompleting) {
+      completeVoiceInput(pendingTranscript)
+    } else if (isListening.value && !isCompleting) {
+      stopMicrophone()
+    }
+  }
 
   try {
-    await connectMicrophone()
+    recognition.start()
   } catch {
-    micError.value = '마이크 권한 없이 예시 움직임으로 보여드릴게요.'
-    startFallbackMotion()
+    micError.value = '마이크를 시작하지 못했어요. 글자로 알려주세요.'
   }
 }
 
+function completeVoiceInput(transcript = pendingTranscript) {
+  if (isCompleting) {
+    return
+  }
+
+  isCompleting = true
+  consultationFlow.setUtterance({
+    utterance: transcript.trim() || VOICE_FALLBACK_UTTERANCE,
+    inputMethod: 'VOICE',
+    sttConfidence: null,
+  })
+  stopMicrophone()
+  void router.push(routePaths.utteranceConfirm)
+}
+
 function goTextInput() {
-  void router.push({ path: routePaths.input, query: { method: 'text' } })
+  void router.push(routePaths.input)
 }
 
 function goFraudWarning() {
@@ -67,48 +124,6 @@ function goFraudWarning() {
 
 function goSettings() {
   void router.push(routePaths.settings)
-}
-
-async function connectMicrophone() {
-  if (!navigator.mediaDevices?.getUserMedia) {
-    throw new Error('Microphone API is not available')
-  }
-
-  stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-  audioContext = new AudioContext()
-  analyser = audioContext.createAnalyser()
-  analyser.fftSize = 256
-
-  const source = audioContext.createMediaStreamSource(stream)
-  source.connect(analyser)
-  animateFromMicrophone()
-}
-
-function animateFromMicrophone() {
-  if (!analyser) {
-    return
-  }
-
-  const samples = new Uint8Array(analyser.frequencyBinCount)
-
-  const tick = () => {
-    if (!analyser) {
-      return
-    }
-
-    analyser.getByteFrequencyData(samples)
-
-    const nextLevels = barLevels.value.map((_, index) => {
-      const sampleIndex = Math.min(index * 4 + 2, samples.length - 1)
-      const sample = samples[sampleIndex] ?? 0
-      return Math.max(0.24, Math.min(1, sample / 150))
-    })
-
-    barLevels.value = nextLevels
-    animationFrame = window.requestAnimationFrame(tick)
-  }
-
-  tick()
 }
 
 function startFallbackMotion() {
@@ -123,15 +138,8 @@ function startFallbackMotion() {
 
 function stopMicrophone() {
   window.cancelAnimationFrame(animationFrame)
-  stream?.getTracks().forEach((track) => track.stop())
-
-  if (audioContext?.state !== 'closed') {
-    void audioContext?.close()
-  }
-
-  stream = null
-  analyser = null
-  audioContext = null
+  recognition?.abort()
+  recognition = null
   isListening.value = false
   barLevels.value = [0.38, 0.64, 0.88, 0.52, 0.7, 0.44]
 }
@@ -215,7 +223,7 @@ onBeforeUnmount(stopMicrophone)
   flex-direction: column;
   min-height: 100vh;
   background: var(--color-bg);
-  padding: var(--space-5) var(--screen-padding-x) var(--space-7);
+  padding: var(--space-5) 0 var(--space-7);
 }
 
 .home__listening-overlay {

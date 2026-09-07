@@ -5,11 +5,15 @@ import AppScreen from '@/components/common/AppScreen.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import FlowHeader from '@/components/common/FlowHeader.vue'
 import InfoCard from '@/components/common/InfoCard.vue'
-import { mockBranchRecommendations, mockChecklist } from '@/mocks'
 import { routePaths } from '@/router/routePaths'
+import { useConsultationFlowStore } from '@/stores/consultationFlow'
 
 const router = useRouter()
-const recommendation = mockBranchRecommendations.recommendations[0]
+const consultationFlow = useConsultationFlowStore()
+
+if (!consultationFlow.selectedBranch) {
+  router.replace(routePaths.home)
+}
 </script>
 
 <template>
@@ -18,7 +22,7 @@ const recommendation = mockBranchRecommendations.recommendations[0]
       <FlowHeader :current="6" :total="6" :back-to="routePaths.branches" />
     </template>
 
-    <section v-if="recommendation" class="summary">
+    <section v-if="consultationFlow.selectedBranch" class="summary">
       <h1>이렇게 가시면 돼요</h1>
 
       <InfoCard>
@@ -26,22 +30,22 @@ const recommendation = mockBranchRecommendations.recommendations[0]
           <li>
             <Clock :size="19" :stroke-width="2.3" />
             <span>
-              <strong>{{ recommendation.visitTime.dayLabel }} {{ recommendation.visitTime.timeLabel }}</strong>
-              <small>대기 {{ recommendation.expectedWaitMinutes }}분 예상</small>
+              <strong>{{ consultationFlow.selectedBranch.visitTime.dayLabel }} {{ consultationFlow.selectedBranch.visitTime.timeLabel }}</strong>
+              <small>대기 {{ consultationFlow.selectedBranch.expectedWaitMinutes }}분 예상</small>
             </span>
           </li>
           <li>
             <MapPin :size="19" :stroke-width="2.3" />
             <span>
-              <strong>{{ recommendation.branch.name }}</strong>
-              <small>{{ recommendation.branch.address }}</small>
+              <strong>{{ consultationFlow.selectedBranch.branch.name }}</strong>
+              <small>{{ consultationFlow.selectedBranch.branch.address }}</small>
             </span>
           </li>
-          <li>
+          <li v-if="consultationFlow.checklist">
             <FileText :size="19" :stroke-width="2.3" />
             <span>
-              <strong>{{ mockChecklist.taskTypeName }}</strong>
-              <small>{{ mockChecklist.items.map((item) => item.name).join(', ') }}</small>
+              <strong>{{ consultationFlow.checklist.taskTypeName }}</strong>
+              <small>{{ consultationFlow.checklist.items.map((item) => item.name).join(', ') }}</small>
             </span>
           </li>
         </ul>

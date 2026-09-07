@@ -1,20 +1,19 @@
+import axios from 'axios'
 import type {
-  ApiResponse,
   AnalyzeRequest,
   AnalyzeResult,
   BranchRecommendationQuery,
   BranchRecommendationResult,
   ChecklistResult,
+  ConsultationHistoryResult,
   DismissWarningRequest,
   DismissWarningResult,
   SpeechTranscriptionResult,
   TaskSelectionRequest,
   TaskSelectionResult,
   TaskType,
-  TaskTypeListResult,
   VisitDecision,
 } from '@/api/types'
-import axios from 'axios'
 import { apiClient } from '@/api/client'
 import {
   mockAnalyzeCandidates,
@@ -27,36 +26,30 @@ import {
   mockTaskTypes,
 } from '@/mocks/consultationMock'
 
-const useMockApi = import.meta.env.VITE_USE_MOCK_API !== 'false'
+interface TaskTypeListResponse {
+  taskTypes: { code: string; name: string; easyDescription: string }[]
+}
+
+const forceMockApi = import.meta.env.VITE_USE_MOCK_API === 'true'
 
 function delay<T>(value: T, ms = 250): Promise<T> {
   return new Promise((resolve) => window.setTimeout(() => resolve(value), ms))
 }
 
-async function unwrapApiResponse<T>(request: Promise<{ data: ApiResponse<T> }>) {
-  const response = (await request).data
-
-  if (response.success) {
-    return response.data
-  }
-
-  throw new Error(response.error.message)
-}
-
 async function withMockFallback<T>(request: () => Promise<T>, fallback: () => Promise<T>) {
-  if (useMockApi) {
+  if (forceMockApi) {
     return fallback()
   }
 
   try {
     return await request()
   } catch (error) {
-    if (axios.isAxiosError(error) && error.response && error.response.status < 500 && error.response.status !== 404) {
-      throw error
+    if (axios.isAxiosError(error) && !error.response) {
+      console.warn('[mock fallback] API request failed, using mock data.', error)
+      return fallback()
     }
 
-    console.warn('[mock fallback] API request failed, using mock data.', error)
-    return fallback()
+    throw error
   }
 }
 
@@ -106,7 +99,12 @@ function findMockTaskByUtterance(utterance: string): TaskType | null {
     matchedCode = 'CARD_REISSUE'
   } else if (normalized.includes('통장') || normalized.includes('분실') || normalized.includes('잃어')) {
     matchedCode = 'PASSBOOK_REISSUE'
-  } else if (normalized.includes('예금') || normalized.includes('적금') || normalized.includes('해지') || normalized.includes('만기')) {
+  } else if (
+    normalized.includes('예금') ||
+    normalized.includes('적금') ||
+    normalized.includes('해지') ||
+    normalized.includes('만기')
+  ) {
     matchedCode = 'DEPOSIT_EARLY_CLOSE'
   } else if (normalized.includes('자동이체') || normalized.includes('자동이제')) {
     matchedCode = 'AUTO_TRANSFER_CHANGE'
@@ -177,20 +175,23 @@ function getMockVisitDecision(task: TaskType | null): VisitDecision {
 export const consultationService = {
   analyze(request: AnalyzeRequest): Promise<AnalyzeResult> {
     return withMockFallback(
-      () => unwrapApiResponse(apiClient.post<ApiResponse<AnalyzeResult>>('/analyze', request)),
+      async () => {
+        const response = await apiClient.post<AnalyzeResult>('/analyze', request)
+        return response.data
+      },
       () => getMockAnalyzeResult(request),
     )
   },
 
   selectTask(consultationId: string, request: TaskSelectionRequest): Promise<TaskSelectionResult> {
     return withMockFallback(
-      () =>
-        unwrapApiResponse(
-          apiClient.post<ApiResponse<TaskSelectionResult>>(
-            `/consultations/${consultationId}/task-selection`,
-            request,
-          ),
-        ),
+      async () => {
+        const response = await apiClient.post<TaskSelectionResult>(
+          `/consultations/${consultationId}/task-selection`,
+          request,
+        )
+        return response.data
+      },
       () => {
         const selectedTask =
           mockTaskTypes.find((taskType) => taskType.taskTypeCode === request.taskTypeCode) ??
@@ -211,18 +212,18 @@ export const consultationService = {
     }
 
     return withMockFallback(
-      () =>
-        unwrapApiResponse(
-          apiClient.post<ApiResponse<DismissWarningResult>>(
-            `/consultations/${consultationId}/dismiss-warning`,
-            request,
-          ),
-        ),
+      async () => {
+        const response = await apiClient.post<DismissWarningResult>(
+          `/consultations/${consultationId}/dismiss-warning`,
+          request,
+        )
+        return response.data
+      },
       () =>
         delay({
           consultationId: mockAnalyzeFraud.consultationId,
           status: mockAnalyzeConfirmed.status,
-          warningDismissed: true as const,
+          warningDismissed: true,
           classification: mockAnalyzeConfirmed.classification,
           visitDecision: mockAnalyzeConfirmed.visitDecision,
         }),
@@ -231,46 +232,54 @@ export const consultationService = {
 
   getChecklist(taskTypeCode: string): Promise<ChecklistResult> {
     return withMockFallback(
-      () =>
-        unwrapApiResponse(
-          apiClient.get<ApiResponse<ChecklistResult>>(`/task-types/${taskTypeCode}/checklist`),
-        ),
+      async () => {
+        const response = await apiClient.get<ChecklistResult>(`/task-types/${taskTypeCode}/checklist`)
+        return response.data
+      },
       () => delay(mockChecklist),
     )
   },
 
   getBranchRecommendations(query: BranchRecommendationQuery): Promise<BranchRecommendationResult> {
     return withMockFallback(
-      () =>
-        unwrapApiResponse(
-          apiClient.get<ApiResponse<BranchRecommendationResult>>('/branches/recommendations', {
-            params: query,
-          }),
-        ),
+      async () => {
+        const response = await apiClient.get<BranchRecommendationResult>('/branches/recommendations', {
+          params: query,
+        })
+        return response.data
+      },
       () => delay(mockBranchRecommendations),
     )
   },
 
-  getTaskTypes(): Promise<TaskTypeListResult> {
+  getTaskTypes(): Promise<TaskType[]> {
     return withMockFallback(
-      () => unwrapApiResponse(apiClient.get<ApiResponse<TaskTypeListResult>>('/task-types')),
+      async () => {
+        const response = await apiClient.get<TaskTypeListResponse>('/task-types')
+        return response.data.taskTypes.map((item) => ({
+          taskTypeCode: item.code,
+          name: item.name,
+          easyDescription: item.easyDescription,
+        }))
+      },
       () =>
-        delay({
-          taskTypes: mockTaskTypes.map((taskType) => ({
-            code: taskType.taskTypeCode,
+        delay(
+          mockTaskTypes.map((taskType) => ({
+            taskTypeCode: taskType.taskTypeCode,
             name: taskType.name,
             easyDescription: taskType.easyDescription,
+            defaultVisitDecision: taskType.defaultVisitDecision,
           })),
-        }),
+        ),
     )
   },
 
-  getConsultationHistory() {
+  getConsultationHistory(): Promise<ConsultationHistoryResult> {
     return withMockFallback(
-      () =>
-        unwrapApiResponse(
-          apiClient.get<ApiResponse<typeof mockConsultationHistory>>('/users/me/consultations'),
-        ),
+      async () => {
+        const response = await apiClient.get<ConsultationHistoryResult>('/users/me/consultations')
+        return response.data
+      },
       () => delay(mockConsultationHistory),
     )
   },
@@ -284,17 +293,17 @@ export const consultationService = {
     }
 
     return withMockFallback(
-      () =>
-        unwrapApiResponse(
-          apiClient.post<ApiResponse<SpeechTranscriptionResult>>('/speech/transcriptions', formData, {
-            headers: {
-              'Content-Type': 'multipart/form-data',
-            },
-          }),
-        ),
+      async () => {
+        const response = await apiClient.post<SpeechTranscriptionResult>('/speech/transcriptions', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        })
+        return response.data
+      },
       () =>
         delay({
-          transcript: mockAnalyzeConfirmed.classification.correctedUtterance,
+          transcript: browserTranscript?.trim() || mockAnalyzeConfirmed.classification.correctedUtterance,
           source: 'WEB_SPEECH_FALLBACK',
           browserTranscript: browserTranscript?.trim() || null,
           sttConfidence: null,

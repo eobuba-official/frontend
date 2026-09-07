@@ -1,19 +1,41 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { Check } from '@lucide/vue'
 import { useRouter } from 'vue-router'
 import AppScreen from '@/components/common/AppScreen.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import FlowHeader from '@/components/common/FlowHeader.vue'
-import { mockChecklist } from '@/mocks'
 import { routePaths } from '@/router/routePaths'
+import { consultationService } from '@/services/consultationService'
+import { useConsultationFlowStore } from '@/stores/consultationFlow'
 
 const router = useRouter()
+const consultationFlow = useConsultationFlowStore()
 const checkedItemCodes = ref<Set<string>>(new Set())
+const isLoading = ref(true)
+const errorMessage = ref('')
 
+if (!consultationFlow.task) {
+  router.replace(routePaths.home)
+}
+
+const checklistItems = computed(() => consultationFlow.checklist?.items ?? [])
 const requiredComplete = computed(() =>
-  mockChecklist.items.filter((item) => item.required).every((item) => checkedItemCodes.value.has(item.itemCode)),
+  checklistItems.value.filter((item) => item.required).every((item) => checkedItemCodes.value.has(item.itemCode)),
 )
+
+onMounted(async () => {
+  if (!consultationFlow.task) return
+
+  try {
+    const result = await consultationService.getChecklist(consultationFlow.task.taskTypeCode)
+    consultationFlow.setChecklist(result)
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : '준비물을 불러오지 못했어요.'
+  } finally {
+    isLoading.value = false
+  }
+})
 
 function toggleItem(itemCode: string) {
   const nextCheckedItems = new Set(checkedItemCodes.value)
@@ -36,11 +58,13 @@ function toggleItem(itemCode: string) {
 
     <section class="checklist">
       <h1>이것들을 챙겨 가세요</h1>
-      <p>하나씩 눌러서 확인해보세요.</p>
+      <p v-if="isLoading">준비물을 확인하고 있어요.</p>
+      <p v-else-if="!errorMessage">하나씩 눌러서 확인해보세요.</p>
+      <p v-else class="checklist__error">{{ errorMessage }}</p>
 
-      <div class="checklist__items">
+      <div v-if="checklistItems.length > 0" class="checklist__items">
         <label
-          v-for="item in mockChecklist.items"
+          v-for="item in checklistItems"
           :key="item.itemCode"
           class="prepare-item"
           :class="{ 'prepare-item--checked': checkedItemCodes.has(item.itemCode) }"
@@ -65,7 +89,11 @@ function toggleItem(itemCode: string) {
     </section>
 
     <template #footer>
-      <BaseButton block :disabled="!requiredComplete" @click="router.push(routePaths.branches)">
+      <BaseButton
+        block
+        :disabled="isLoading || checklistItems.length === 0 || !requiredComplete"
+        @click="router.push(routePaths.branches)"
+      >
         지점 보기
       </BaseButton>
     </template>
@@ -87,6 +115,10 @@ function toggleItem(itemCode: string) {
 
 .checklist > p {
   color: var(--color-ink-soft);
+}
+
+.checklist__error {
+  color: var(--color-alert);
 }
 
 .checklist__items {

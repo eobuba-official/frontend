@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { CreditCard, Landmark, Mic, Pencil, PiggyBank, RotateCcw } from '@lucide/vue'
 import { useRouter } from 'vue-router'
 import AppScreen from '@/components/common/AppScreen.vue'
@@ -7,34 +7,59 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import FlowHeader from '@/components/common/FlowHeader.vue'
 import { mockTaskTypes } from '@/mocks'
 import { routePaths } from '@/router/routePaths'
-import { useConsultationStore } from '@/stores/consultation'
+import { consultationService } from '@/services/consultationService'
+import { useConsultationFlowStore } from '@/stores/consultationFlow'
 
 const router = useRouter()
-const consultationStore = useConsultationStore()
+const consultationFlow = useConsultationFlowStore()
 
-const correctedUtterance = computed(
-  () => consultationStore.correctedUtterance || '통장을 잃어버렸는데 다시 만들고 싶어',
-)
-const candidates = computed(() => {
-  const analyzedCandidates = consultationStore.candidateTasks
+if (!consultationFlow.utterance) {
+  router.replace(routePaths.home)
+}
 
-  if (analyzedCandidates.length > 0) {
-    return analyzedCandidates
+const isSubmitting = ref(false)
+const errorMessage = ref('')
+const correctedUtterance = computed(() => consultationFlow.utterance)
+const candidatePreview = computed(() => {
+  if (consultationFlow.candidates.length > 0) {
+    return consultationFlow.candidates
   }
 
-  const mainTaskCode = consultationStore.currentTask?.taskTypeCode
-  return mockTaskTypes.filter((task) => task.taskTypeCode !== mainTaskCode)
+  return mockTaskTypes.slice(0, 3)
 })
 
-async function confirmUtterance() {
-  const result = consultationStore.analyzeResult ?? (await consultationStore.analyzeCurrentUtterance())
+async function handleConfirm() {
+  if (!consultationFlow.utterance) return
 
-  if (result.status === 'FRAUD_WARNING') {
-    await router.push(routePaths.fraudWarning)
-    return
+  isSubmitting.value = true
+  errorMessage.value = ''
+
+  try {
+    const result = await consultationService.analyze({
+      utterance: consultationFlow.utterance,
+      inputMethod: consultationFlow.inputMethod,
+      sttConfidence: consultationFlow.sttConfidence,
+    })
+    consultationFlow.setAnalyzeResult(result)
+
+    switch (result.status) {
+      case 'FRAUD_WARNING':
+        await router.push(routePaths.fraudWarning)
+        break
+      case 'TASK_CONFIRMED':
+        await router.push(routePaths.visitDecision)
+        break
+      case 'CANDIDATES_SUGGESTED':
+        await router.push(routePaths.taskConfirm)
+        break
+      default:
+        await router.push(routePaths.consultationEnd)
+    }
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : '분석에 실패했어요. 다시 시도해 주세요.'
+  } finally {
+    isSubmitting.value = false
   }
-
-  await router.push(routePaths.taskConfirm)
 }
 </script>
 
@@ -44,7 +69,7 @@ async function confirmUtterance() {
       <FlowHeader :current="1" :total="6" :back-to="routePaths.home" label="음성 확인" hide-home />
     </template>
 
-    <section class="confirm">
+    <section v-if="consultationFlow.utterance" class="confirm">
       <div class="confirm__heading">
         <h1>음성 결과 확인</h1>
         <p>아래 내용이 맞는지 확인해 주세요.</p>
@@ -56,7 +81,7 @@ async function confirmUtterance() {
         </span>
         <div>
           <p>인식된 내용</p>
-            <strong>{{ correctedUtterance }}</strong>
+          <strong>{{ correctedUtterance }}</strong>
         </div>
       </article>
 
@@ -67,7 +92,7 @@ async function confirmUtterance() {
           </template>
           다시 말하기
         </BaseButton>
-        <BaseButton variant="ghost" @click="router.push({ path: routePaths.input, query: { method: 'text' } })">
+        <BaseButton variant="ghost" @click="router.push(routePaths.input)">
           <template #icon>
             <Pencil :size="20" :stroke-width="2.2" />
           </template>
@@ -75,16 +100,18 @@ async function confirmUtterance() {
         </BaseButton>
       </div>
 
+      <p v-if="errorMessage" class="confirm__error">{{ errorMessage }}</p>
+
       <div class="candidate-section">
         <h2>이런 업무로 보여요</h2>
         <p>가장 비슷한 업무를 선택해 주세요.</p>
 
         <button
-          v-for="(task, index) in candidates"
+          v-for="(task, index) in candidatePreview"
           :key="task.taskTypeCode"
           class="candidate-card"
           type="button"
-          @click="router.push(routePaths.taskConfirm)"
+          @click="consultationFlow.setUtterance({ utterance: task.name, inputMethod: 'TEXT' })"
         >
           <span class="candidate-card__icon" aria-hidden="true">
             <CreditCard v-if="index === 0" :size="28" :stroke-width="2.2" />
@@ -100,8 +127,8 @@ async function confirmUtterance() {
     </section>
 
     <template #footer>
-      <BaseButton block :disabled="consultationStore.isAnalyzing" @click="confirmUtterance">
-        {{ consultationStore.isAnalyzing ? '확인 중...' : '네, 맞아요' }}
+      <BaseButton block :disabled="isSubmitting || !consultationFlow.utterance" @click="handleConfirm">
+        {{ isSubmitting ? '확인하는 중...' : '네, 맞아요' }}
       </BaseButton>
     </template>
   </AppScreen>
@@ -172,6 +199,11 @@ async function confirmUtterance() {
   font-size: 1.7rem;
   font-weight: 900;
   line-height: 1.35;
+}
+
+.confirm__error {
+  color: var(--color-alert);
+  font-size: var(--text-sm);
 }
 
 .confirm__actions {
