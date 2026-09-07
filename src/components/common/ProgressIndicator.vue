@@ -60,6 +60,6 @@ function isDone(index: number) {
 }
 
 .progress-indicator__dot--done {
-  background: var(--color-success);
+  background: var(--color-accent-deep);
 }
 </style>

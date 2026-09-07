@@ -83,19 +83,19 @@ withDefaults(
 }
 
 .base-button--primary {
-  background: var(--color-accent);
+  background: linear-gradient(180deg, #ffc928 0%, var(--color-accent) 100%);
   color: var(--color-accent-ink);
 }
 
 .base-button--alert {
   background: var(--color-alert);
-  color: var(--color-surface);
+  color: #ffffff;
 }
 
 .base-button--ghost {
   background: var(--color-surface);
   border-color: var(--color-line);
-  color: var(--color-ink);
+  color: var(--color-ink-soft);
 }
 
 .base-button--text {

@@ -10,7 +10,6 @@ import { consultationService } from '@/services/consultationService'
 import { useConsultationFlowStore } from '@/stores/consultationFlow'
 import type { BranchRecommendation } from '@/api/types'
 
-// 서울시청 좌표 — 위치 정보를 못 받을 때의 기본값
 const FALLBACK_LOCATION = { lat: 37.5665, lng: 126.978 }
 const GEOLOCATION_TIMEOUT_MS = 5000
 
@@ -79,7 +78,8 @@ function handleConfirm() {
 
     <section class="branches">
       <h1>이렇게 가시는 걸<br />추천드려요</h1>
-      <p v-if="!errorMessage">가까운 시간과 적은 대기 시간을 순서로 보여드려요.</p>
+      <p v-if="isLoading">가까운 지점과 시간을 찾고 있어요.</p>
+      <p v-else-if="!errorMessage">가까운 시간과 적은 대기 시간을 순서로 보여드려요.</p>
       <p v-else class="branches__error">{{ errorMessage }}</p>
 
       <div class="branches__list">
@@ -110,7 +110,7 @@ function handleConfirm() {
 
     <template #footer>
       <div class="branches__footer">
-        <BaseButton variant="ghost" block>지도에서 보기</BaseButton>
+        <BaseButton variant="ghost" block @click="router.push(routePaths.branchMap)">지도에서 보기</BaseButton>
         <BaseButton block :disabled="!selected" @click="handleConfirm">이 시간으로 정하기</BaseButton>
       </div>
     </template>
@@ -153,7 +153,7 @@ function handleConfirm() {
   gap: var(--space-3);
   width: 100%;
   padding: var(--space-4);
-  border: 1px solid transparent;
+  border: 1px solid var(--color-line);
   border-radius: var(--radius-md);
   background: var(--color-surface);
   box-shadow: var(--shadow-card);
@@ -164,6 +164,7 @@ function handleConfirm() {
 
 .branch-card--best {
   border-color: var(--color-accent);
+  background: var(--color-yellow-faint);
 }
 
 .branch-card__rank {
@@ -176,6 +177,11 @@ function handleConfirm() {
   background: var(--color-accent);
   color: var(--color-accent-ink);
   font-weight: 800;
+}
+
+.branch-card:not(.branch-card--best) .branch-card__rank {
+  background: var(--color-surface-alt);
+  color: var(--color-ink-soft);
 }
 
 .branch-card__body {

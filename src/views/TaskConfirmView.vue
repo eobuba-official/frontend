@@ -16,7 +16,7 @@ if (!consultationFlow.consultationId || consultationFlow.candidates.length === 0
   router.replace(routePaths.home)
 }
 
-const selectedCode = ref<string | null>(null)
+const selectedCode = ref<string | null>(consultationFlow.candidates[0]?.taskTypeCode ?? null)
 const isSubmitting = ref(false)
 const errorMessage = ref('')
 

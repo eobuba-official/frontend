@@ -41,7 +41,8 @@ withDefaults(
 }
 
 .info-card--accent {
-  background: var(--color-surface-alt);
+  border-color: var(--color-accent);
+  background: var(--color-yellow-faint);
 }
 
 .info-card--success {
