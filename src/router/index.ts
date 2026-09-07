@@ -71,12 +71,6 @@ const router = createRouter({
       component: () => import('@/views/BranchMapView.vue'),
     },
     {
-      path: routePaths.branchDetail,
-      name: 'branch-detail',
-      meta: { step: 5 },
-      component: () => import('@/views/BranchDetailView.vue'),
-    },
-    {
       path: routePaths.visitSummary,
       name: 'visit-summary',
       meta: { step: 6 },
