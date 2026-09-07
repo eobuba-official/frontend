@@ -1,33 +1,7 @@
-import type {
-  AnalyzeResult,
-  BranchRecommendationResult,
-  ChecklistResult,
-  ConsultationHistoryResult,
-  TaskSelectionResult,
-  TaskType,
-} from '@/api/types'
+import type { AnalyzeResult, ConsultationHistoryResult } from '@/api/types'
 
-export const mockTaskTypes: TaskType[] = [
-  {
-    taskTypeCode: 'PASSBOOK_REISSUE',
-    name: '통장 재발급',
-    easyDescription: '통장을 잃어버렸을 때 새로 만드는 일',
-    defaultVisitDecision: 'VISIT_REQUIRED',
-  },
-  {
-    taskTypeCode: 'DEPOSIT_EARLY_CLOSE',
-    name: '예금 중도해지',
-    easyDescription: '만기 전에 돈을 찾는 것',
-    defaultVisitDecision: 'CHECK_NEEDED',
-  },
-  {
-    taskTypeCode: 'AUTO_TRANSFER_CHANGE',
-    name: '자동이체 변경',
-    easyDescription: '매달 자동으로 나가는 돈을 바꾸는 것',
-    defaultVisitDecision: 'NO_VISIT',
-  },
-]
-
+// consultationService.dismissWarning()의 mock 구현에서만 쓰입니다 —
+// 백엔드에 경고 해제 API가 아직 없어서 그 자리표시자로 남아있습니다.
 export const mockAnalyzeConfirmed: AnalyzeResult = {
   consultationId: 'mock-consultation-001',
   status: 'TASK_CONFIRMED',
@@ -42,7 +16,11 @@ export const mockAnalyzeConfirmed: AnalyzeResult = {
     status: 'CONFIRMED',
     correctedUtterance: '통장을 잃어버렸는데 다시 만들고 싶어',
     confidence: 0.93,
-    task: mockTaskTypes[0] ?? null,
+    task: {
+      taskTypeCode: 'PASSBOOK_REISSUE',
+      name: '통장 재발급',
+      easyDescription: '통장을 잃어버렸을 때 새로 만드는 일',
+    },
     candidates: [],
     sttRecheckNeeded: true,
   },
@@ -52,27 +30,6 @@ export const mockAnalyzeConfirmed: AnalyzeResult = {
     remoteMethods: [],
     officialChannels: [],
   },
-}
-
-export const mockAnalyzeCandidates: AnalyzeResult = {
-  consultationId: 'mock-consultation-002',
-  status: 'CANDIDATES_SUGGESTED',
-  fraudCheck: {
-    detected: false,
-    dismissible: false,
-    patterns: [],
-    safetyActions: [],
-    guardianNotification: null,
-  },
-  classification: {
-    status: 'CANDIDATES',
-    correctedUtterance: '아들 이름으로 뭘 좀 해야 하는데',
-    confidence: 0.48,
-    task: null,
-    candidates: mockTaskTypes,
-    sttRecheckNeeded: true,
-  },
-  visitDecision: null,
 }
 
 export const mockAnalyzeFraud: AnalyzeResult = {
@@ -109,133 +66,6 @@ export const mockAnalyzeFraud: AnalyzeResult = {
     sttRecheckNeeded: true,
   },
   visitDecision: null,
-}
-
-export const mockChecklist: ChecklistResult = {
-  taskTypeCode: 'PASSBOOK_REISSUE',
-  taskTypeName: '통장 재발급',
-  items: [
-    {
-      itemCode: 'ID_CARD',
-      name: '신분증',
-      easyDescription: '주민등록증이나 운전면허증',
-      required: true,
-      condition: null,
-      displayOrder: 1,
-    },
-    {
-      itemCode: 'SEAL',
-      name: '도장',
-      easyDescription: '통장 만들 때 쓴 도장',
-      required: false,
-      condition: '서명으로 만든 통장이면 필요 없어요',
-      displayOrder: 2,
-    },
-    {
-      itemCode: 'POA',
-      name: '위임장',
-      easyDescription: '다른 사람이 대신 갈 때 필요한 종이',
-      required: false,
-      condition: '가족이 대신 방문하는 경우',
-      displayOrder: 3,
-    },
-    {
-      itemCode: 'FAMILY_CERT',
-      name: '가족관계증명서',
-      easyDescription: '가족임을 증명하는 종이',
-      required: false,
-      condition: '가족이 대신 방문하는 경우',
-      displayOrder: 4,
-    },
-  ],
-}
-
-export const mockBranchRecommendations: BranchRecommendationResult = {
-  recommendations: [
-    {
-      rank: 1,
-      branch: {
-        branchId: 103,
-        name: 'KB국민은행 종로지점',
-        address: '서울 종로구 종로 1',
-        phone: '02-000-0000',
-        distanceKm: 1.2,
-      },
-      visitTime: {
-        date: '2026-09-06',
-        dayLabel: '내일',
-        timeSlot: '10:00-11:00',
-        timeLabel: '오전 10시',
-      },
-      expectedWaitMinutes: 5,
-      congestionSource: 'MOCK',
-      score: 91.5,
-      sentence: '내일 오전 10시에 종로지점 방문을 추천해요. 대기가 가장 적은 시간이에요.',
-    },
-    {
-      rank: 2,
-      branch: {
-        branchId: 87,
-        name: 'KB국민은행 광화문지점',
-        address: '서울 종로구 세종대로 2',
-        phone: '02-000-0001',
-        distanceKm: 0.8,
-      },
-      visitTime: {
-        date: '2026-09-06',
-        dayLabel: '내일',
-        timeSlot: '14:00-15:00',
-        timeLabel: '오후 2시',
-      },
-      expectedWaitMinutes: 12,
-      congestionSource: 'MOCK',
-      score: 84,
-      sentence: '내일 오후 2시 광화문지점도 좋아요. 거리가 가장 가까워요.',
-    },
-    {
-      rank: 3,
-      branch: {
-        branchId: 103,
-        name: 'KB국민은행 종로지점',
-        address: '서울 종로구 종로 1',
-        phone: '02-000-0000',
-        distanceKm: 1.2,
-      },
-      visitTime: {
-        date: '2026-09-05',
-        dayLabel: '오늘',
-        timeSlot: '15:00-16:00',
-        timeLabel: '오후 3시',
-      },
-      expectedWaitMinutes: 25,
-      congestionSource: 'MOCK',
-      score: 71,
-      sentence: '오늘 꼭 가야 한다면 오후 3시 종로지점이 그나마 한가해요.',
-    },
-  ],
-  weights: { wait: 0.7, distance: 0.3 },
-}
-
-export const mockTaskSelectionResult: TaskSelectionResult = {
-  consultationId: 'mock-consultation-002',
-  status: 'TASK_CONFIRMED',
-  task: mockTaskTypes[1] ?? {
-    taskTypeCode: 'DEPOSIT_EARLY_CLOSE',
-    name: '예금 중도해지',
-    easyDescription: '만기 전에 돈을 찾는 것',
-  },
-  visitDecision: {
-    decision: 'CHECK_NEEDED',
-    reason: '상품에 따라 앱에서 해지가 가능할 수 있어요. 먼저 확인해 보세요.',
-    remoteMethods: [],
-    officialChannels: [
-      {
-        name: 'KB국민은행 고객센터',
-        phone: '1588-9999',
-        description: '해지 가능 여부를 전화로 확인',
-      },
-    ],
-  },
 }
 
 export const mockConsultationHistory: ConsultationHistoryResult = {

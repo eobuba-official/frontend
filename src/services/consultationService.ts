@@ -8,9 +8,14 @@ import type {
   DismissWarningRequest,
   TaskSelectionRequest,
   TaskSelectionResult,
+  TaskType,
 } from '@/api/types'
 import { apiClient } from '@/api/client'
-import { mockAnalyzeConfirmed, mockAnalyzeFraud, mockTaskTypes } from '@/mocks/consultationMock'
+import { mockAnalyzeConfirmed, mockAnalyzeFraud } from '@/mocks/consultationMock'
+
+interface TaskTypeListResponse {
+  taskTypes: { code: string; name: string; easyDescription: string }[]
+}
 
 function delay<T>(value: T, ms = 250): Promise<T> {
   return new Promise((resolve) => window.setTimeout(() => resolve(value), ms))
@@ -47,8 +52,8 @@ export const consultationService = {
     return response.data
   },
 
-  // No backend endpoint exists yet for these two — kept as mocks until the
-  // corresponding API is built (경고 해제, 업무 유형 전체 목록).
+  // No backend endpoint exists yet for dismiss-warning — kept as mock until
+  // the corresponding API is built (경고 해제).
   dismissWarning(_consultationId: string, request: DismissWarningRequest) {
     if (!request.confirmed) {
       return Promise.reject(new Error('confirmed must be true'))
@@ -63,7 +68,12 @@ export const consultationService = {
     })
   },
 
-  getTaskTypes() {
-    return delay(mockTaskTypes)
+  async getTaskTypes(): Promise<TaskType[]> {
+    const response = await apiClient.get<TaskTypeListResponse>('/task-types')
+    return response.data.taskTypes.map((item) => ({
+      taskTypeCode: item.code,
+      name: item.name,
+      easyDescription: item.easyDescription,
+    }))
   },
 }
