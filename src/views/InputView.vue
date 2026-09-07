@@ -1,21 +1,36 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import { ChevronRight, CreditCard, PiggyBank, UserRoundPlus } from '@lucide/vue'
 import { useRouter } from 'vue-router'
 import AppScreen from '@/components/common/AppScreen.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
+import FlowHeader from '@/components/common/FlowHeader.vue'
 import { routePaths } from '@/router/routePaths'
 import { useConsultationFlowStore } from '@/stores/consultationFlow'
 
 const router = useRouter()
 const consultationFlow = useConsultationFlowStore()
+const requestText = ref(consultationFlow.utterance)
 
-const text = ref('')
-const canSubmit = computed(() => text.value.trim().length > 0)
+const canSubmit = computed(() => requestText.value.trim().length > 0)
 
-function handleSubmit() {
-  if (!canSubmit.value) return
+const popularTasks = [
+  { label: '통장 재발급', icon: CreditCard },
+  { label: '카드 재발급', icon: CreditCard },
+  { label: '예금 / 적금 해지', icon: PiggyBank },
+  { label: '계좌 개설', icon: UserRoundPlus },
+]
 
-  consultationFlow.setUtterance({ utterance: text.value.trim(), inputMethod: 'TEXT' })
+function chooseTask(taskName: string) {
+  requestText.value = taskName
+}
+
+function submitInput() {
+  if (!canSubmit.value) {
+    return
+  }
+
+  consultationFlow.setUtterance({ utterance: requestText.value.trim(), inputMethod: 'TEXT' })
   void router.push(routePaths.utteranceConfirm)
 }
 </script>
@@ -23,71 +38,150 @@ function handleSubmit() {
 <template>
   <AppScreen>
     <template #header>
-      <button class="back-button" type="button" @click="router.push(routePaths.home)">← 이전</button>
+      <FlowHeader :current="1" :total="6" :back-to="routePaths.home" label="직접 입력" hide-home />
     </template>
 
-    <section class="input">
-      <h1>은행 업무를 알려주세요</h1>
-      <p>어떤 도움이 필요하신지 편하게 적어주세요.</p>
+    <section class="manual-input">
+      <h1>어떤 업무를<br />도와드릴까요?</h1>
+      <p>궁금한 내용이나 필요한 업무를 편하게 입력해 주세요.</p>
 
-      <textarea
-        v-model="text"
-        class="input__textarea"
-        rows="5"
-        placeholder="예) 통장을 잃어버려서 다시 만들고 싶어요"
-      ></textarea>
+      <label class="manual-input__field">
+        <textarea v-model="requestText" maxlength="500" placeholder="예: 통장을 잃어버렸어요"></textarea>
+        <span>{{ requestText.length }}/500</span>
+      </label>
+
+      <div class="manual-input__popular">
+        <h2>이런 업무를 많이 물어보세요</h2>
+
+        <button
+          v-for="task in popularTasks"
+          :key="task.label"
+          class="popular-task"
+          type="button"
+          @click="chooseTask(task.label)"
+        >
+          <span class="popular-task__icon" aria-hidden="true">
+            <component :is="task.icon" :size="28" :stroke-width="2.2" />
+          </span>
+          <strong>{{ task.label }}</strong>
+          <ChevronRight :size="24" :stroke-width="2.4" aria-hidden="true" />
+        </button>
+      </div>
     </section>
 
     <template #footer>
-      <BaseButton block :disabled="!canSubmit" @click="handleSubmit">다음</BaseButton>
+      <BaseButton block :disabled="!canSubmit" @click="submitInput">확인하기</BaseButton>
     </template>
   </AppScreen>
 </template>
 
 <style scoped>
-.back-button {
-  border: 0;
-  background: transparent;
-  color: var(--color-ink-soft);
-  font: inherit;
-  font-weight: 700;
-  cursor: pointer;
+.manual-input {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
 }
 
-.input {
+.manual-input h1 {
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: 2.4rem;
+  font-weight: 900;
+  line-height: 1.22;
+}
+
+.manual-input > p {
+  color: var(--color-ink-soft);
+  font-size: var(--text-xl);
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.manual-input__field {
+  position: relative;
+  display: block;
+  min-height: 176px;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.manual-input__field textarea {
+  width: 100%;
+  min-height: 176px;
+  padding: var(--space-5);
+  padding-bottom: var(--space-9);
+  resize: none;
+  border: 0;
+  background: transparent;
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: var(--text-xl);
+  font-weight: 700;
+  line-height: 1.5;
+  outline: none;
+}
+
+.manual-input__field textarea::placeholder {
+  color: var(--color-ink-muted);
+}
+
+.manual-input__field span {
+  position: absolute;
+  right: var(--space-5);
+  bottom: var(--space-4);
+  color: var(--color-ink-faint);
+  font-size: var(--text-base);
+  font-weight: 600;
+}
+
+.manual-input__popular {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+  margin-top: var(--space-4);
 }
 
-.input h1 {
+.manual-input__popular h2 {
+  margin-bottom: var(--space-2);
+  color: var(--color-ink);
   font-family: var(--font-body);
   font-size: var(--text-2xl);
+  font-weight: 900;
 }
 
-.input > p {
-  color: var(--color-ink-soft);
-}
-
-.input__textarea {
-  width: 100%;
-  margin-top: var(--space-3);
-  padding: var(--space-4);
+.popular-task {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: var(--space-4);
+  min-height: 76px;
+  padding: var(--space-3) var(--space-4);
   border: 1px solid var(--color-line);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   background: var(--color-surface);
   color: var(--color-ink);
-  font: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.popular-task__icon {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-pill);
+  background: var(--color-yellow-faint);
+  color: var(--color-accent-deep);
+}
+
+.popular-task strong {
   font-size: var(--text-lg);
-  resize: vertical;
+  font-weight: 800;
 }
 
-.input__textarea:focus {
-  outline: none;
-  border-color: var(--color-accent);
-}
-
-.input__textarea::placeholder {
-  color: var(--color-ink-faint);
+.popular-task > svg {
+  color: var(--color-ink-soft);
 }
 </style>

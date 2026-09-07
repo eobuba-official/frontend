@@ -15,11 +15,17 @@ export interface ApiError {
     | 'INVALID_INPUT'
     | 'UNAUTHORIZED'
     | 'INVALID_SMS_CODE'
+    | 'SMS_REQUEST_COOLDOWN'
     | 'CONSULTATION_NOT_FOUND'
     | 'TASK_TYPE_NOT_FOUND'
     | 'INVALID_STATE'
     | 'ALREADY_REGISTERED'
     | 'NO_WARNING_TO_DISMISS'
+    | 'NOT_FOUND'
+    | 'METHOD_NOT_ALLOWED'
+    | 'INVALID_AUDIO'
+    | 'AUDIO_TOO_LARGE'
+    | 'STT_ERROR'
     | 'LLM_ERROR'
     | 'INTERNAL_ERROR'
   message: string
@@ -103,7 +109,7 @@ export interface AnalyzeResult {
   fraudCheck: FraudCheck
   classification: Classification
   visitDecision: VisitDecision | null
-  guidance?: string
+  guidance?: string | null
 }
 
 export interface FraudCheck {
@@ -220,7 +226,7 @@ export interface BranchRecommendationQuery {
   limit?: number
 }
 
-export type CongestionSource = 'MOCK' | 'FALLBACK'
+export type CongestionSource = 'MOCK' | 'FALLBACK' | 'SEOUL_RTD'
 
 export interface BranchRecommendationResult {
   recommendations: BranchRecommendation[]
@@ -268,11 +274,19 @@ export interface ConsultationHistoryItem {
   createdAt: string
 }
 
-export type TranscriptionSource = 'CLOVA_CSR' | 'WEB_SPEECH_FALLBACK'
+export interface TaskTypeListResult {
+  taskTypes: TaskTypeListItem[]
+}
+
+export interface TaskTypeListItem {
+  code: string
+  name: string
+  easyDescription: string
+}
 
 export interface SpeechTranscriptionResult {
   transcript: string
-  source: TranscriptionSource
+  source: 'CLOVA_CSR' | 'WEB_SPEECH_FALLBACK'
   browserTranscript: string | null
   sttConfidence: number | null
   recheckNeeded: boolean

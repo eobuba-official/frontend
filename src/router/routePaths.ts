@@ -9,6 +9,8 @@ export const routePaths = {
   visitDecision: '/visit-decision',
   checklist: '/checklist',
   branches: '/branches',
+  branchMap: '/branches/map',
+  branchDetail: '/branches/detail',
   visitSummary: '/visit-summary',
   fraudWarning: '/fraud-warning',
   fraudDismissConfirm: '/fraud-warning/dismiss-confirm',

@@ -28,7 +28,7 @@ const heading = computed(() => {
 <template>
   <AppScreen>
     <template #header>
-      <FlowHeader :current="3" :total="6" :back-to="routePaths.taskConfirm" />
+      <FlowHeader :current="3" :total="6" :back-to="routePaths.utteranceConfirm" />
     </template>
 
     <section v-if="consultationFlow.visitDecision" class="visit-decision">
@@ -94,8 +94,8 @@ const heading = computed(() => {
   height: 96px;
   margin-inline: auto;
   border-radius: var(--radius-pill);
-  background: var(--color-surface-alt);
-  color: var(--color-accent);
+  background: var(--color-yellow-light);
+  color: var(--color-accent-deep);
 }
 
 .visit-decision__copy {
@@ -143,6 +143,6 @@ const heading = computed(() => {
 
 .check-list svg {
   flex-shrink: 0;
-  color: var(--color-success);
+  color: var(--color-accent-deep);
 }
 </style>

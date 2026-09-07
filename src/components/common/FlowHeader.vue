@@ -7,6 +7,8 @@ const props = defineProps<{
   current: number
   total: number
   backTo?: string
+  label?: string
+  hideHome?: boolean
 }>()
 
 const router = useRouter()
@@ -28,8 +30,16 @@ function goBack() {
         <ChevronLeft :size="18" :stroke-width="2.4" />
         뒤로
       </button>
-      <span>{{ current }} / {{ total }}</span>
-      <button class="flow-header__button flow-header__button--home" type="button" @click="router.push(routePaths.home)">
+      <span class="flow-header__step">
+        {{ current }} / {{ total }}
+        <em v-if="label">{{ label }}</em>
+      </span>
+      <button
+        v-if="!hideHome"
+        class="flow-header__button flow-header__button--home"
+        type="button"
+        @click="router.push(routePaths.home)"
+      >
         처음으로
       </button>
     </div>
@@ -72,11 +82,25 @@ function goBack() {
   justify-self: end;
 }
 
+.flow-header__step {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  justify-self: center;
+  color: var(--color-ink-soft);
+}
+
+.flow-header__step em {
+  color: inherit;
+  font-style: normal;
+  font-weight: 700;
+}
+
 .flow-header__bar {
   height: 4px;
   overflow: hidden;
   border-radius: var(--radius-pill);
-  background: var(--color-surface-alt);
+  background: var(--color-line);
 }
 
 .flow-header__bar span {

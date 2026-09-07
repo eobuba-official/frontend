@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
-import { CheckSquare } from '@lucide/vue'
+import { computed, onMounted, ref } from 'vue'
+import { Check } from '@lucide/vue'
 import { useRouter } from 'vue-router'
 import AppScreen from '@/components/common/AppScreen.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
@@ -11,13 +11,18 @@ import { useConsultationFlowStore } from '@/stores/consultationFlow'
 
 const router = useRouter()
 const consultationFlow = useConsultationFlowStore()
+const checkedItemCodes = ref<Set<string>>(new Set())
+const isLoading = ref(true)
+const errorMessage = ref('')
 
 if (!consultationFlow.task) {
   router.replace(routePaths.home)
 }
 
-const isLoading = ref(true)
-const errorMessage = ref('')
+const checklistItems = computed(() => consultationFlow.checklist?.items ?? [])
+const requiredComplete = computed(() =>
+  checklistItems.value.filter((item) => item.required).every((item) => checkedItemCodes.value.has(item.itemCode)),
+)
 
 onMounted(async () => {
   if (!consultationFlow.task) return
@@ -31,6 +36,18 @@ onMounted(async () => {
     isLoading.value = false
   }
 })
+
+function toggleItem(itemCode: string) {
+  const nextCheckedItems = new Set(checkedItemCodes.value)
+
+  if (nextCheckedItems.has(itemCode)) {
+    nextCheckedItems.delete(itemCode)
+  } else {
+    nextCheckedItems.add(itemCode)
+  }
+
+  checkedItemCodes.value = nextCheckedItems
+}
 </script>
 
 <template>
@@ -41,14 +58,24 @@ onMounted(async () => {
 
     <section class="checklist">
       <h1>이것들을 챙겨 가세요</h1>
-      <p v-if="!errorMessage">하나씩 눌러서 확인해보세요.</p>
+      <p v-if="isLoading">준비물을 확인하고 있어요.</p>
+      <p v-else-if="!errorMessage">하나씩 눌러서 확인해보세요.</p>
       <p v-else class="checklist__error">{{ errorMessage }}</p>
 
-      <div v-if="consultationFlow.checklist" class="checklist__items">
-        <label v-for="item in consultationFlow.checklist.items" :key="item.itemCode" class="prepare-item">
-          <input type="checkbox" />
-          <span class="prepare-item__box">
-            <CheckSquare :size="20" :stroke-width="2.2" />
+      <div v-if="checklistItems.length > 0" class="checklist__items">
+        <label
+          v-for="item in checklistItems"
+          :key="item.itemCode"
+          class="prepare-item"
+          :class="{ 'prepare-item--checked': checkedItemCodes.has(item.itemCode) }"
+        >
+          <input
+            type="checkbox"
+            :checked="checkedItemCodes.has(item.itemCode)"
+            @change="toggleItem(item.itemCode)"
+          />
+          <span class="prepare-item__box" aria-hidden="true">
+            <Check :size="15" :stroke-width="3" />
           </span>
           <span class="prepare-item__text">
             <strong>
@@ -62,7 +89,11 @@ onMounted(async () => {
     </section>
 
     <template #footer>
-      <BaseButton block :disabled="isLoading || !consultationFlow.checklist" @click="router.push(routePaths.branches)">
+      <BaseButton
+        block
+        :disabled="isLoading || checklistItems.length === 0 || !requiredComplete"
+        @click="router.push(routePaths.branches)"
+      >
         지점 보기
       </BaseButton>
     </template>
@@ -103,10 +134,25 @@ onMounted(async () => {
   gap: var(--space-3);
   min-height: 76px;
   padding: var(--space-4);
+  border: 1px solid var(--color-line);
   border-radius: var(--radius-md);
   background: var(--color-surface);
   box-shadow: var(--shadow-card);
   cursor: pointer;
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease,
+    box-shadow 180ms ease,
+    transform 180ms ease;
+}
+
+.prepare-item--checked {
+  border-color: var(--color-accent);
+  background: var(--color-yellow-faint);
+}
+
+.prepare-item:active {
+  transform: scale(0.99);
 }
 
 .prepare-item input {
@@ -117,16 +163,39 @@ onMounted(async () => {
 .prepare-item__box {
   display: grid;
   place-items: center;
-  width: 34px;
-  height: 34px;
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
   border-radius: var(--radius-sm);
-  background: var(--color-surface-alt);
-  color: transparent;
+  border: 2px solid var(--color-accent-deep);
+  background: transparent;
+  color: var(--color-accent-deep);
+  transform: scale(1);
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease,
+    transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1.2);
+}
+
+.prepare-item__box svg {
+  opacity: 0;
+  transform: scale(0.45);
+  transition:
+    opacity 140ms ease,
+    transform 180ms cubic-bezier(0.2, 0.8, 0.2, 1.4);
 }
 
 .prepare-item input:checked + .prepare-item__box {
   background: var(--color-accent);
-  color: var(--color-surface);
+  border-color: var(--color-accent);
+  color: var(--color-accent-ink);
+  transform: scale(1.08);
+}
+
+.prepare-item input:checked + .prepare-item__box svg {
+  opacity: 1;
+  transform: scale(1);
 }
 
 .prepare-item__text {

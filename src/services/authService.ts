@@ -1,4 +1,12 @@
-import type { MeResult, SignupRequest, SignupResult, SmsRequest, SmsRequestResult, SmsVerifyRequest, SmsVerifyResult } from '@/api/types'
+import type {
+  MeResult,
+  SignupRequest,
+  SignupResult,
+  SmsRequest,
+  SmsRequestResult,
+  SmsVerifyRequest,
+  SmsVerifyResult,
+} from '@/api/types'
 import { apiClient, setAccessToken } from '@/api/client'
 
 export const authService = {
@@ -20,6 +28,7 @@ export const authService = {
   async signup(request: SignupRequest): Promise<SignupResult> {
     const response = await apiClient.post<SignupResult>('/auth/signup', request)
     setAccessToken(response.data.accessToken)
+
     return response.data
   },
 

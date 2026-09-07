@@ -43,7 +43,8 @@ withDefaults(
 }
 
 .checklist-item--checked {
-  border-color: var(--color-success);
+  border-color: var(--color-accent);
+  background: var(--color-yellow-faint);
 }
 
 .checklist-item__check {
@@ -55,13 +56,13 @@ withDefaults(
   height: 24px;
   border-radius: var(--radius-sm);
   background: var(--color-surface-alt);
-  color: var(--color-success);
+  color: var(--color-accent-deep);
   font-weight: 700;
 }
 
 .checklist-item--checked .checklist-item__check {
-  background: var(--color-success);
-  color: var(--color-surface);
+  background: var(--color-accent);
+  color: var(--color-ink);
 }
 
 .checklist-item__body {
