@@ -48,7 +48,7 @@ const services = [
 <template>
   <AppScreen>
     <template #header>
-      <FlowHeader :current="1" :total="6" :back-to="routePaths.branchMap" label="지점 선택" hide-home />
+      <FlowHeader :current="5" :total="6" :back-to="routePaths.branchMap" label="지점 선택" hide-home />
     </template>
 
     <section class="branch-detail">

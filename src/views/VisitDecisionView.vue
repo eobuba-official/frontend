@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { Check, Home } from '@lucide/vue'
 import { useRouter } from 'vue-router'
 import AppScreen from '@/components/common/AppScreen.vue'
@@ -7,9 +8,12 @@ import FlowHeader from '@/components/common/FlowHeader.vue'
 import InfoCard from '@/components/common/InfoCard.vue'
 import { mockAnalyzeConfirmed } from '@/mocks'
 import { routePaths } from '@/router/routePaths'
+import { useConsultationStore } from '@/stores/consultation'
 
 const router = useRouter()
-const task = mockAnalyzeConfirmed.classification.task
+const consultationStore = useConsultationStore()
+const task = computed(() => consultationStore.currentTask ?? mockAnalyzeConfirmed.classification.task)
+const visitDecision = computed(() => consultationStore.analyzeResult?.visitDecision ?? mockAnalyzeConfirmed.visitDecision)
 const checks = ['통장에 쓰신 도장이 있는지', '본인이 직접 가시는지', '신분증 유효기간이 남았는지']
 </script>
 
@@ -26,7 +30,7 @@ const checks = ['통장에 쓰신 도장이 있는지', '본인이 직접 가시
 
       <div class="visit-decision__copy">
         <h1>이 업무는<br />은행에 가셔야 해요</h1>
-        <p>{{ mockAnalyzeConfirmed.visitDecision?.reason }}</p>
+        <p>{{ visitDecision?.reason }}</p>
       </div>
 
       <InfoCard title="가시기 전에 확인하세요">

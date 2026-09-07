@@ -4,8 +4,10 @@ import { Keyboard, Mic, Settings, ShieldAlert } from '@lucide/vue'
 import { useRouter } from 'vue-router'
 import AppScreen from '@/components/common/AppScreen.vue'
 import { routePaths } from '@/router/routePaths'
+import { useConsultationStore } from '@/stores/consultation'
 
 const router = useRouter()
+const consultationStore = useConsultationStore()
 const userName = '김부바'
 const isListening = ref(false)
 const micError = ref('')
@@ -39,6 +41,7 @@ const micCoreScale = computed(() => {
 async function handleVoiceStart() {
   if (isListening.value) {
     stopMicrophone()
+    await consultationStore.startMockVoiceConsultation()
     await router.push({ path: routePaths.utteranceConfirm, query: { method: 'voice' } })
     return
   }
@@ -160,6 +163,12 @@ onBeforeUnmount(stopMicrophone)
       </header>
 
       <section class="home__hero" aria-labelledby="home-title">
+        <div class="home__copy">
+          <h2 id="home-title">{{ isListening ? '듣고 있어요...' : '무엇을 도와드릴까요?' }}</h2>
+          <p>{{ isListening ? '끝나면 동그라미를 다시 눌러주세요' : '동그라미를 누르고 편하게 말씀하세요' }}</p>
+          <small v-if="micError">{{ micError }}</small>
+        </div>
+
         <button
           class="voice-orb"
           :class="{ 'voice-orb--listening': isListening }"
@@ -175,12 +184,6 @@ onBeforeUnmount(stopMicrophone)
             <Mic :size="52" :stroke-width="1.9" />
           </span>
         </button>
-
-        <div class="home__copy">
-          <h2 id="home-title">{{ isListening ? '듣고 있어요...' : '무엇을 도와드릴까요?' }}</h2>
-          <p>{{ isListening ? '끝나면 동그라미를 다시 눌러주세요' : '동그라미를 누르고 편하게 말씀하세요' }}</p>
-          <small v-if="micError">{{ micError }}</small>
-        </div>
       </section>
 
       <section class="quick-actions" aria-label="빠른 실행">
@@ -313,10 +316,6 @@ onBeforeUnmount(stopMicrophone)
   text-align: center;
 }
 
-.home--listening .home__hero {
-  justify-content: center;
-}
-
 .voice-orb {
   position: relative;
   z-index: 2;
@@ -384,7 +383,6 @@ onBeforeUnmount(stopMicrophone)
 }
 
 .home--listening .home__copy {
-  order: -1;
   color: #ffffff;
 }
 

@@ -15,11 +15,17 @@ export interface ApiError {
     | 'INVALID_INPUT'
     | 'UNAUTHORIZED'
     | 'INVALID_SMS_CODE'
+    | 'SMS_REQUEST_COOLDOWN'
     | 'CONSULTATION_NOT_FOUND'
     | 'TASK_TYPE_NOT_FOUND'
     | 'INVALID_STATE'
     | 'ALREADY_REGISTERED'
     | 'NO_WARNING_TO_DISMISS'
+    | 'NOT_FOUND'
+    | 'METHOD_NOT_ALLOWED'
+    | 'INVALID_AUDIO'
+    | 'AUDIO_TOO_LARGE'
+    | 'STT_ERROR'
     | 'LLM_ERROR'
     | 'INTERNAL_ERROR'
   message: string
@@ -72,7 +78,6 @@ export interface SmsVerifyResult {
   registered: boolean
   accessToken: string | null
   signupToken?: string
-  user?: User
 }
 
 export interface SignupRequest {
@@ -82,8 +87,8 @@ export interface SignupRequest {
 }
 
 export interface SignupResult {
+  userId: number
   accessToken: string
-  user: User
 }
 
 export interface AnalyzeRequest {
@@ -193,7 +198,7 @@ export interface DismissWarningResult {
 
 export interface ChecklistResult {
   taskTypeCode: string
-  taskName: string
+  taskTypeName: string
   items: ChecklistItem[]
 }
 
@@ -203,6 +208,7 @@ export interface ChecklistItem {
   easyDescription: string
   required: boolean
   condition: string | null
+  displayOrder: number
 }
 
 export interface BranchRecommendationQuery {
@@ -220,7 +226,6 @@ export interface BranchRecommendationResult {
     wait: number
     distance: number
   }
-  congestionSource: 'MOCK' | 'SEOUL_RTD'
 }
 
 export interface BranchRecommendation {
@@ -228,6 +233,7 @@ export interface BranchRecommendation {
   branch: Branch
   visitTime: VisitTime
   expectedWaitMinutes: number
+  congestionSource: 'MOCK' | 'SEOUL_RTD'
   score: number
   sentence: string
 }
@@ -253,9 +259,27 @@ export interface ConsultationHistoryResult {
 
 export interface ConsultationHistoryItem {
   consultationId: string
-  utterance: string
   correctedUtterance: string
   status: ConsultationStatus
-  taskName: string | null
+  taskTypeCode: string | null
+  confidence: number | null
   createdAt: string
+}
+
+export interface TaskTypeListResult {
+  taskTypes: TaskTypeListItem[]
+}
+
+export interface TaskTypeListItem {
+  code: string
+  name: string
+  easyDescription: string
+}
+
+export interface SpeechTranscriptionResult {
+  transcript: string
+  source: 'CLOVA_CSR' | 'WEB_SPEECH_FALLBACK'
+  browserTranscript: string | null
+  sttConfidence: number | null
+  recheckNeeded: boolean
 }

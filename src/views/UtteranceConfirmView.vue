@@ -1,21 +1,47 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { CreditCard, Landmark, Mic, Pencil, PiggyBank, RotateCcw } from '@lucide/vue'
 import { useRouter } from 'vue-router'
 import AppScreen from '@/components/common/AppScreen.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import FlowHeader from '@/components/common/FlowHeader.vue'
-import { mockAnalyzeConfirmed, mockTaskTypes } from '@/mocks'
+import { mockTaskTypes } from '@/mocks'
 import { routePaths } from '@/router/routePaths'
+import { useConsultationStore } from '@/stores/consultation'
 
 const router = useRouter()
-const correctedUtterance = mockAnalyzeConfirmed.classification.correctedUtterance
-const candidates = mockTaskTypes
+const consultationStore = useConsultationStore()
+
+const correctedUtterance = computed(
+  () => consultationStore.correctedUtterance || '통장을 잃어버렸는데 다시 만들고 싶어',
+)
+const candidates = computed(() => {
+  const analyzedCandidates = consultationStore.candidateTasks
+
+  if (analyzedCandidates.length > 0) {
+    return analyzedCandidates
+  }
+
+  const mainTaskCode = consultationStore.currentTask?.taskTypeCode
+  return mockTaskTypes.filter((task) => task.taskTypeCode !== mainTaskCode)
+})
+
+async function confirmUtterance() {
+  const result = consultationStore.analyzeResult ?? (await consultationStore.analyzeCurrentUtterance())
+
+  if (result.status === 'FRAUD_WARNING') {
+    await router.push(routePaths.fraudWarning)
+    return
+  }
+
+  await router.push(routePaths.taskConfirm)
+}
 </script>
 
 <template>
   <AppScreen>
     <template #header>
-      <FlowHeader :current="2" :total="6" :back-to="routePaths.home" label="음성 확인" hide-home />
+      <FlowHeader :current="1" :total="6" :back-to="routePaths.home" label="음성 확인" hide-home />
     </template>
 
     <section class="confirm">
@@ -30,7 +56,7 @@ const candidates = mockTaskTypes
         </span>
         <div>
           <p>인식된 내용</p>
-          <strong>{{ correctedUtterance }}</strong>
+            <strong>{{ correctedUtterance }}</strong>
         </div>
       </article>
 
@@ -74,7 +100,9 @@ const candidates = mockTaskTypes
     </section>
 
     <template #footer>
-      <BaseButton block @click="router.push(routePaths.taskConfirm)">네, 맞아요</BaseButton>
+      <BaseButton block :disabled="consultationStore.isAnalyzing" @click="confirmUtterance">
+        {{ consultationStore.isAnalyzing ? '확인 중...' : '네, 맞아요' }}
+      </BaseButton>
     </template>
   </AppScreen>
 </template>

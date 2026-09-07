@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { CreditCard, PiggyBank } from '@lucide/vue'
 import { useRouter } from 'vue-router'
 import AppScreen from '@/components/common/AppScreen.vue'
@@ -7,10 +8,41 @@ import FlowHeader from '@/components/common/FlowHeader.vue'
 import InfoCard from '@/components/common/InfoCard.vue'
 import { mockAnalyzeConfirmed, mockTaskTypes } from '@/mocks'
 import { routePaths } from '@/router/routePaths'
+import { useConsultationStore } from '@/stores/consultation'
 
 const router = useRouter()
-const mainTask = mockAnalyzeConfirmed.classification.task
-const candidates = mockTaskTypes.slice(1)
+const consultationStore = useConsultationStore()
+const mainTask = computed(() =>
+  consultationStore.analyzeResult ? consultationStore.currentTask : mockAnalyzeConfirmed.classification.task,
+)
+const candidates = computed(() => {
+  if (consultationStore.candidateTasks.length > 0) {
+    return consultationStore.candidateTasks
+  }
+
+  return mockTaskTypes.filter((task) => task.taskTypeCode !== mainTask.value?.taskTypeCode)
+})
+const confidenceLabel = computed(() => {
+  const confidence = consultationStore.analyzeResult?.classification.confidence
+
+  if (typeof confidence !== 'number') {
+    return null
+  }
+
+  return `확신도 ${Math.round(confidence * 100)}%`
+})
+
+async function selectTask(task = mainTask.value ?? candidates.value[0]) {
+  if (!task) {
+    return
+  }
+
+  if (consultationStore.candidateTasks.length > 0) {
+    await consultationStore.selectCandidate(task)
+  }
+
+  await router.push(routePaths.visitDecision)
+}
 </script>
 
 <template>
@@ -28,7 +60,7 @@ const candidates = mockTaskTypes.slice(1)
             <strong>{{ mainTask.name }}</strong>
             <p>{{ mainTask.easyDescription }}</p>
           </div>
-          <span>확신도 93%</span>
+          <span v-if="confidenceLabel">{{ confidenceLabel }}</span>
         </div>
       </InfoCard>
 
@@ -37,7 +69,13 @@ const candidates = mockTaskTypes.slice(1)
         <p>다른 업무일 수도 있어요.</p>
       </div>
 
-      <button v-for="(task, index) in candidates" :key="task.taskTypeCode" class="task-card" type="button">
+      <button
+        v-for="(task, index) in candidates"
+        :key="task.taskTypeCode"
+        class="task-card"
+        type="button"
+        @click="selectTask(task)"
+      >
         <span class="task-card__icon" aria-hidden="true">
           <PiggyBank v-if="index === 0" :size="22" :stroke-width="2.2" />
           <CreditCard v-else :size="22" :stroke-width="2.2" />
@@ -54,7 +92,7 @@ const candidates = mockTaskTypes.slice(1)
         <BaseButton variant="ghost" block @click="router.push(routePaths.consultationEnd)">
           모르겠어요, 상담받을게요
         </BaseButton>
-        <BaseButton block @click="router.push(routePaths.visitDecision)">네, 맞아요</BaseButton>
+        <BaseButton block @click="selectTask()">네, 맞아요</BaseButton>
       </div>
     </template>
   </AppScreen>

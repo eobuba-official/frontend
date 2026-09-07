@@ -21,10 +21,40 @@ export const mockTaskTypes: TaskType[] = [
     defaultVisitDecision: 'CHECK_NEEDED',
   },
   {
+    taskTypeCode: 'CARD_REISSUE',
+    name: '카드 재발급',
+    easyDescription: '카드를 새로 받는 일',
+    defaultVisitDecision: 'CHECK_NEEDED',
+  },
+  {
+    taskTypeCode: 'PASSWORD_CHANGE',
+    name: '비밀번호 변경',
+    easyDescription: '비밀번호를 바꾸거나 찾는 일',
+    defaultVisitDecision: 'CHECK_NEEDED',
+  },
+  {
     taskTypeCode: 'AUTO_TRANSFER_CHANGE',
     name: '자동이체 변경',
     easyDescription: '매달 자동으로 나가는 돈을 바꾸는 것',
     defaultVisitDecision: 'NO_VISIT',
+  },
+  {
+    taskTypeCode: 'BALANCE_INQUIRY',
+    name: '잔액·거래내역 조회',
+    easyDescription: '통장에 얼마 있는지 보는 일',
+    defaultVisitDecision: 'NO_VISIT',
+  },
+  {
+    taskTypeCode: 'ACCOUNT_TRANSFER',
+    name: '계좌이체',
+    easyDescription: '다른 사람에게 돈을 보내는 일',
+    defaultVisitDecision: 'NO_VISIT',
+  },
+  {
+    taskTypeCode: 'PROXY_TASK',
+    name: '대리 업무',
+    easyDescription: '가족 일을 대신 처리하는 것',
+    defaultVisitDecision: 'VISIT_REQUIRED',
   },
 ]
 
@@ -69,7 +99,11 @@ export const mockAnalyzeCandidates: AnalyzeResult = {
     correctedUtterance: '아들 이름으로 뭘 좀 해야 하는데',
     confidence: 0.48,
     task: null,
-    candidates: mockTaskTypes,
+    candidates: [
+      mockTaskTypes.find((task) => task.taskTypeCode === 'DEPOSIT_EARLY_CLOSE') ?? mockTaskTypes[1],
+      mockTaskTypes.find((task) => task.taskTypeCode === 'ACCOUNT_TRANSFER') ?? mockTaskTypes[6],
+      mockTaskTypes.find((task) => task.taskTypeCode === 'PROXY_TASK') ?? mockTaskTypes[7],
+    ].filter(Boolean) as TaskType[],
     sttRecheckNeeded: true,
   },
   visitDecision: null,
@@ -113,7 +147,7 @@ export const mockAnalyzeFraud: AnalyzeResult = {
 
 export const mockChecklist: ChecklistResult = {
   taskTypeCode: 'PASSBOOK_REISSUE',
-  taskName: '통장 재발급',
+  taskTypeName: '통장 재발급',
   items: [
     {
       itemCode: 'ID_CARD',
@@ -121,6 +155,7 @@ export const mockChecklist: ChecklistResult = {
       easyDescription: '주민등록증이나 운전면허증',
       required: true,
       condition: null,
+      displayOrder: 1,
     },
     {
       itemCode: 'SEAL',
@@ -128,6 +163,7 @@ export const mockChecklist: ChecklistResult = {
       easyDescription: '통장 만들 때 쓴 도장',
       required: false,
       condition: '서명으로 만든 통장이면 필요 없어요',
+      displayOrder: 2,
     },
     {
       itemCode: 'POA',
@@ -135,6 +171,7 @@ export const mockChecklist: ChecklistResult = {
       easyDescription: '다른 사람이 대신 갈 때 필요한 종이',
       required: false,
       condition: '가족이 대신 방문하는 경우',
+      displayOrder: 3,
     },
     {
       itemCode: 'FAMILY_CERT',
@@ -142,6 +179,7 @@ export const mockChecklist: ChecklistResult = {
       easyDescription: '가족임을 증명하는 종이',
       required: false,
       condition: '가족이 대신 방문하는 경우',
+      displayOrder: 4,
     },
   ],
 }
@@ -164,6 +202,7 @@ export const mockBranchRecommendations: BranchRecommendationResult = {
         timeLabel: '오전 10시',
       },
       expectedWaitMinutes: 5,
+      congestionSource: 'MOCK',
       score: 91.5,
       sentence: '내일 오전 10시에 종로지점 방문을 추천해요. 대기가 가장 적은 시간이에요.',
     },
@@ -183,6 +222,7 @@ export const mockBranchRecommendations: BranchRecommendationResult = {
         timeLabel: '오후 2시',
       },
       expectedWaitMinutes: 12,
+      congestionSource: 'MOCK',
       score: 84,
       sentence: '내일 오후 2시 광화문지점도 좋아요. 거리가 가장 가까워요.',
     },
@@ -202,12 +242,12 @@ export const mockBranchRecommendations: BranchRecommendationResult = {
         timeLabel: '오후 3시',
       },
       expectedWaitMinutes: 25,
+      congestionSource: 'MOCK',
       score: 71,
       sentence: '오늘 꼭 가야 한다면 오후 3시 종로지점이 그나마 한가해요.',
     },
   ],
   weights: { wait: 0.7, distance: 0.3 },
-  congestionSource: 'MOCK',
 }
 
 export const mockTaskSelectionResult: TaskSelectionResult = {
@@ -236,10 +276,10 @@ export const mockConsultationHistory: ConsultationHistoryResult = {
   consultations: [
     {
       consultationId: 'mock-consultation-001',
-      utterance: '통장을 잃어버렸어',
       correctedUtterance: '통장을 잃어버렸어',
       status: 'TASK_CONFIRMED',
-      taskName: '통장 재발급',
+      taskTypeCode: 'PASSBOOK_REISSUE',
+      confidence: 0.93,
       createdAt: '2026-09-05T10:30:00',
     },
   ],

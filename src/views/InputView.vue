@@ -6,8 +6,10 @@ import AppScreen from '@/components/common/AppScreen.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import FlowHeader from '@/components/common/FlowHeader.vue'
 import { routePaths } from '@/router/routePaths'
+import { useConsultationStore } from '@/stores/consultation'
 
 const router = useRouter()
+const consultationStore = useConsultationStore()
 const requestText = ref('')
 
 const popularTasks = [
@@ -21,19 +23,21 @@ function chooseTask(taskName: string) {
   requestText.value = taskName
 }
 
-function submitInput() {
+async function submitInput() {
   if (!requestText.value.trim()) {
     return
   }
 
-  void router.push({ path: routePaths.utteranceConfirm, query: { method: 'text' } })
+  consultationStore.setUtterance(requestText.value, 'TEXT')
+  await consultationStore.analyzeCurrentUtterance()
+  await router.push({ path: routePaths.utteranceConfirm, query: { method: 'text' } })
 }
 </script>
 
 <template>
   <AppScreen>
     <template #header>
-      <FlowHeader :current="3" :total="6" :back-to="routePaths.home" label="직접 입력" hide-home />
+      <FlowHeader :current="1" :total="6" :back-to="routePaths.home" label="직접 입력" hide-home />
     </template>
 
     <section class="manual-input">
@@ -65,7 +69,9 @@ function submitInput() {
     </section>
 
     <template #footer>
-      <BaseButton block :disabled="!requestText.trim()" @click="submitInput">확인하기</BaseButton>
+      <BaseButton block :disabled="!requestText.trim() || consultationStore.isAnalyzing" @click="submitInput">
+        {{ consultationStore.isAnalyzing ? '확인 중...' : '확인하기' }}
+      </BaseButton>
     </template>
   </AppScreen>
 </template>
