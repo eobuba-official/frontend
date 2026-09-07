@@ -1,4 +1,7 @@
 export const routePaths = {
+  login: '/login',
+  smsVerify: '/login/verify',
+  guardianRegister: '/login/guardian',
   home: '/',
   input: '/input',
   utteranceConfirm: '/utterance/confirm',

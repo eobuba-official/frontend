@@ -34,6 +34,12 @@ defineProps<{
   background: var(--color-bg);
 }
 
+@media (min-width: 640px) {
+  .app-screen {
+    box-shadow: var(--shadow-card);
+  }
+}
+
 .app-screen__header {
   flex-shrink: 0;
   padding: var(--space-5) var(--screen-padding-x) var(--space-3);

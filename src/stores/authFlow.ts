@@ -1,0 +1,28 @@
+import { ref } from 'vue'
+import { defineStore } from 'pinia'
+
+export const useAuthFlowStore = defineStore('authFlow', () => {
+  const phoneNumber = ref('')
+  const signupToken = ref<string | null>(null)
+  const mockCode = ref<string | null>(null)
+
+  function setPhoneNumber(value: string) {
+    phoneNumber.value = value
+  }
+
+  function setMockCode(value: string | null | undefined) {
+    mockCode.value = value ?? null
+  }
+
+  function setSignupToken(value: string | null | undefined) {
+    signupToken.value = value ?? null
+  }
+
+  function reset() {
+    phoneNumber.value = ''
+    signupToken.value = null
+    mockCode.value = null
+  }
+
+  return { phoneNumber, signupToken, mockCode, setPhoneNumber, setMockCode, setSignupToken, reset }
+})
