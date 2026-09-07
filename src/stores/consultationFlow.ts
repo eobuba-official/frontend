@@ -21,6 +21,7 @@ export const useConsultationFlowStore = defineStore('consultationFlow', () => {
   const status = ref<ConsultationStatus | null>(null)
   const task = ref<TaskType | null>(null)
   const candidates = ref<TaskType[]>([])
+  const confidence = ref<number | null>(null)
   const visitDecision = ref<VisitDecision | null>(null)
   const fraudCheck = ref<FraudCheck | null>(null)
   const guidance = ref<string | null>(null)
@@ -38,6 +39,7 @@ export const useConsultationFlowStore = defineStore('consultationFlow', () => {
     status.value = result.status
     task.value = result.classification.task
     candidates.value = result.classification.candidates
+    confidence.value = result.classification.confidence
     visitDecision.value = result.visitDecision
     fraudCheck.value = result.fraudCheck
     guidance.value = result.guidance ?? null
@@ -47,6 +49,7 @@ export const useConsultationFlowStore = defineStore('consultationFlow', () => {
     status.value = result.status
     task.value = result.task
     candidates.value = []
+    confidence.value = null
     visitDecision.value = result.visitDecision
   }
 
@@ -66,6 +69,7 @@ export const useConsultationFlowStore = defineStore('consultationFlow', () => {
     status.value = null
     task.value = null
     candidates.value = []
+    confidence.value = null
     visitDecision.value = null
     fraudCheck.value = null
     guidance.value = null
@@ -81,6 +85,7 @@ export const useConsultationFlowStore = defineStore('consultationFlow', () => {
     status,
     task,
     candidates,
+    confidence,
     visitDecision,
     fraudCheck,
     guidance,

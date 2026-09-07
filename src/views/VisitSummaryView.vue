@@ -14,6 +14,11 @@ const consultationFlow = useConsultationFlowStore()
 if (!consultationFlow.selectedBranch) {
   router.replace(routePaths.home)
 }
+
+function handleFinish() {
+  consultationFlow.reset()
+  void router.push(routePaths.home)
+}
 </script>
 
 <template>
@@ -57,7 +62,7 @@ if (!consultationFlow.selectedBranch) {
     </section>
 
     <template #footer>
-      <BaseButton block @click="router.push(routePaths.consultationEnd)">끝내고 보기</BaseButton>
+      <BaseButton block @click="handleFinish">끝내고 보기</BaseButton>
     </template>
   </AppScreen>
 </template>

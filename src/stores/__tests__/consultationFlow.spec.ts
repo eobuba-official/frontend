@@ -113,12 +113,14 @@ describe('consultationFlow store', () => {
     const store = useConsultationFlowStore()
     store.setAnalyzeResult(candidatesResult)
     expect(store.candidates).toHaveLength(2)
+    expect(store.confidence).toBe(0.5)
 
     store.setTaskSelection(taskSelectionResult)
 
     expect(store.task?.taskTypeCode).toBe('CARD_REISSUE')
     expect(store.visitDecision?.decision).toBe('CHECK_NEEDED')
     expect(store.candidates).toEqual([])
+    expect(store.confidence).toBeNull()
   })
 
   it('stores the checklist and the branch the user picked', () => {
@@ -155,6 +157,7 @@ describe('consultationFlow store', () => {
     expect(store.status).toBeNull()
     expect(store.task).toBeNull()
     expect(store.candidates).toEqual([])
+    expect(store.confidence).toBeNull()
     expect(store.visitDecision).toBeNull()
     expect(store.fraudCheck).toBeNull()
     expect(store.guidance).toBeNull()
