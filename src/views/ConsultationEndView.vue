@@ -6,6 +6,10 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import { routePaths } from '@/router/routePaths'
 
 const router = useRouter()
+
+function callCustomerCenter() {
+  window.location.href = 'tel:1588-9999'
+}
 </script>
 
 <template>
@@ -21,7 +25,7 @@ const router = useRouter()
     <template #footer>
       <div class="end__footer">
         <BaseButton variant="ghost" block @click="router.push(routePaths.home)">다시 말해볼게요</BaseButton>
-        <BaseButton block>KB국민은행 1588-9999</BaseButton>
+        <BaseButton block @click="callCustomerCenter">KB국민은행 1588-9999</BaseButton>
       </div>
     </template>
   </AppScreen>

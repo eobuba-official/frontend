@@ -2,6 +2,8 @@
 defineProps<{
   /** hide the standard top padding, e.g. when a header slot handles its own spacing */
   noTopPadding?: boolean
+  /** remove all content padding, e.g. for a full-bleed map that manages its own overlays */
+  noPadding?: boolean
 }>()
 </script>
 
@@ -11,7 +13,10 @@ defineProps<{
       <slot name="header" />
     </header>
 
-    <main class="app-screen__content" :class="{ 'app-screen__content--flush-top': noTopPadding }">
+    <main
+      class="app-screen__content"
+      :class="{ 'app-screen__content--flush-top': noTopPadding, 'app-screen__content--flush': noPadding }"
+    >
       <slot />
     </main>
 
@@ -55,6 +60,10 @@ defineProps<{
 
 .app-screen__content--flush-top {
   padding-top: 0;
+}
+
+.app-screen__content--flush {
+  padding: 0;
 }
 
 .app-screen__footer {
