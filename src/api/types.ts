@@ -47,11 +47,13 @@ export interface User {
   phoneNumber: string
 }
 
+export type GuardianRelation = '아들' | '딸' | '배우자' | '기타'
+
 export interface Guardian {
   guardianId?: number
   name: string
   phoneNumber: string
-  relation: '아들' | '딸' | '배우자' | '기타'
+  relation: GuardianRelation
 }
 
 export interface SmsRequest {

@@ -28,6 +28,10 @@ function delay<T>(value: T, ms = 250): Promise<T> {
   return new Promise((resolve) => window.setTimeout(() => resolve(value), ms))
 }
 
+// 이미 가입된 것으로 취급할 번호. 그 외 번호는 미가입 처리되어
+// 가족 등록 화면(회원가입 플로우)으로 이어집니다.
+const registeredPhoneNumbers = new Set<string>([mockUser.phoneNumber])
+
 export const authService = {
   requestSms(_request: SmsRequest): Promise<SmsRequestResult> {
     return delay({
@@ -39,6 +43,14 @@ export const authService = {
   verifySms(request: SmsVerifyRequest): Promise<SmsVerifyResult> {
     if (request.code !== '123456') {
       return Promise.reject(new Error('인증번호가 맞지 않습니다.'))
+    }
+
+    if (!registeredPhoneNumbers.has(request.phoneNumber)) {
+      return delay({
+        registered: false,
+        accessToken: null,
+        signupToken: 'mock-signup-token',
+      })
     }
 
     const accessToken = 'mock-access-token'

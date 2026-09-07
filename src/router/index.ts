@@ -1,9 +1,27 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { getAccessToken } from '@/api/client'
 import { routePaths } from './routePaths'
+
+const publicPaths: string[] = [routePaths.login, routePaths.smsVerify, routePaths.guardianRegister]
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
+    {
+      path: routePaths.login,
+      name: 'login',
+      component: () => import('@/views/login/LoginView.vue'),
+    },
+    {
+      path: routePaths.smsVerify,
+      name: 'sms-verify',
+      component: () => import('@/views/login/SmsVerifyView.vue'),
+    },
+    {
+      path: routePaths.guardianRegister,
+      name: 'guardian-register',
+      component: () => import('@/views/login/GuardianRegisterView.vue'),
+    },
     {
       path: routePaths.home,
       name: 'home',
@@ -65,6 +83,19 @@ const router = createRouter({
       component: () => import('@/views/SettingsView.vue'),
     },
   ],
+})
+
+router.beforeEach((to) => {
+  const isAuthenticated = Boolean(getAccessToken())
+  const isPublicPath = publicPaths.includes(to.path)
+
+  if (!isAuthenticated && !isPublicPath) {
+    return { path: routePaths.login }
+  }
+
+  if (isAuthenticated && isPublicPath) {
+    return { path: routePaths.home }
+  }
 })
 
 export default router
