@@ -1,4 +1,5 @@
 import axios from 'axios'
+import type { ApiResponse } from './types'
 
 const ACCESS_TOKEN_KEY = 'eobuba.accessToken'
 
@@ -19,6 +20,23 @@ apiClient.interceptors.request.use((config) => {
 
   return config
 })
+
+// Backend wraps every response in ApiResponse<T> ({ success, data, error }).
+// Unwrap it here so callers work with the plain payload type, like the
+// mock services they replace.
+apiClient.interceptors.response.use(
+  (response) => {
+    const body = response.data as ApiResponse<unknown>
+    return { ...response, data: body.data }
+  },
+  (error: unknown) => {
+    if (axios.isAxiosError<ApiResponse<unknown>>(error) && error.response?.data?.error) {
+      return Promise.reject(new Error(error.response.data.error.message))
+    }
+
+    return Promise.reject(error)
+  },
+)
 
 export function getAccessToken() {
   return window.localStorage.getItem(ACCESS_TOKEN_KEY)

@@ -8,7 +8,7 @@ import PhoneNumberField from '@/components/common/PhoneNumberField.vue'
 import { routePaths } from '@/router/routePaths'
 import { authService } from '@/services/authService'
 import { useAuthFlowStore } from '@/stores/authFlow'
-import type { Guardian, GuardianRelation } from '@/api/types'
+import type { GuardianRelation } from '@/api/types'
 
 const router = useRouter()
 const authFlow = useAuthFlowStore()
@@ -19,6 +19,7 @@ if (!authFlow.signupToken) {
 
 const relations: GuardianRelation[] = ['아들', '딸', '배우자', '기타']
 
+const ownName = ref('')
 const guardianName = ref('')
 const guardianPhoneDigits = ref('')
 const relation = ref<GuardianRelation>('아들')
@@ -26,42 +27,38 @@ const isSubmitting = ref(false)
 const errorMessage = ref('')
 
 const canRegister = computed(
-  () => guardianName.value.trim().length > 0 && guardianPhoneDigits.value.length === 8 && !isSubmitting.value,
+  () =>
+    ownName.value.trim().length > 0 &&
+    guardianName.value.trim().length > 0 &&
+    guardianPhoneDigits.value.length === 8 &&
+    !isSubmitting.value,
 )
 
-async function completeSignup(guardians: Guardian[]) {
+async function handleRegister() {
+  if (!canRegister.value) return
+
   isSubmitting.value = true
   errorMessage.value = ''
 
   try {
     await authService.signup({
       signupToken: authFlow.signupToken ?? '',
-      name: '',
-      guardians,
+      name: ownName.value.trim(),
+      guardians: [
+        {
+          name: guardianName.value.trim(),
+          phoneNumber: `010${guardianPhoneDigits.value}`,
+          relation: relation.value,
+        },
+      ],
     })
     authFlow.reset()
     await router.push(routePaths.home)
-  } catch {
-    errorMessage.value = '가입을 완료하지 못했어요. 다시 시도해 주세요.'
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : '가입을 완료하지 못했어요. 다시 시도해 주세요.'
   } finally {
     isSubmitting.value = false
   }
-}
-
-function handleSkip() {
-  void completeSignup([])
-}
-
-function handleRegister() {
-  if (!canRegister.value) return
-
-  void completeSignup([
-    {
-      name: guardianName.value.trim(),
-      phoneNumber: `010${guardianPhoneDigits.value}`,
-      relation: relation.value,
-    },
-  ])
 }
 </script>
 
@@ -77,6 +74,17 @@ function handleRegister() {
     <section class="guardian">
       <h1>가족 한 분을<br />등록해 주세요</h1>
       <p class="guardian__lede">수상한 전화가 감지되면 이 분께<br />바로 알려드려요.</p>
+
+      <label class="name-field" for="own-name">
+        <span class="name-field__label">본인 이름</span>
+        <input
+          id="own-name"
+          v-model="ownName"
+          class="name-field__input"
+          type="text"
+          placeholder="이름을 입력해 주세요"
+        />
+      </label>
 
       <label class="name-field" for="guardian-name">
         <span class="name-field__label">가족 이름</span>
@@ -111,12 +119,9 @@ function handleRegister() {
     </section>
 
     <template #footer>
-      <div class="guardian__actions">
-        <BaseButton variant="ghost" block :disabled="isSubmitting" @click="handleSkip">나중에 등록할게요</BaseButton>
-        <BaseButton block :disabled="!canRegister" @click="handleRegister">
-          {{ isSubmitting ? '시작하는 중...' : '어부바 시작하기' }}
-        </BaseButton>
-      </div>
+      <BaseButton block :disabled="!canRegister" @click="handleRegister">
+        {{ isSubmitting ? '시작하는 중...' : '어부바 시작하기' }}
+      </BaseButton>
     </template>
   </AppScreen>
 </template>
@@ -231,11 +236,5 @@ function handleRegister() {
 .guardian__error {
   color: var(--color-alert);
   font-size: var(--text-sm);
-}
-
-.guardian__actions {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
 }
 </style>
