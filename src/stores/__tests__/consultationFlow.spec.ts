@@ -4,8 +4,8 @@ import { useConsultationFlowStore } from '../consultationFlow'
 import type {
   AnalyzeResult,
   BranchRecommendation,
-  ChecklistResult,
   DismissWarningResult,
+  ResolvedChecklistResult,
   TaskSelectionResult,
 } from '@/api/types'
 
@@ -159,7 +159,12 @@ describe('consultationFlow store', () => {
 
   it('stores the checklist and the branch the user picked', () => {
     const store = useConsultationFlowStore()
-    const checklist: ChecklistResult = { taskTypeCode: 'PASSBOOK_REISSUE', taskTypeName: '통장 재발급', items: [] }
+    const checklist: ResolvedChecklistResult = {
+      taskTypeCode: 'PASSBOOK_REISSUE',
+      taskTypeName: '통장 재발급',
+      resolved: true,
+      items: [],
+    }
     const branch: BranchRecommendation = {
       rank: 1,
       branch: { branchId: 1, name: 'KB국민은행 종로지점', address: '서울', phone: '02-000-0000', distanceKm: 1 },

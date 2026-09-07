@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { CalendarCheck, Clock, FileText, MapPin } from '@lucide/vue'
 import { useRouter } from 'vue-router'
 import AppScreen from '@/components/common/AppScreen.vue'
@@ -14,6 +15,10 @@ const consultationFlow = useConsultationFlowStore()
 if (!consultationFlow.selectedBranch) {
   router.replace(routePaths.home)
 }
+
+const neededItems = computed(
+  () => consultationFlow.checklist?.items.filter((item) => item.status === 'INCLUDED') ?? [],
+)
 
 function handleFinish() {
   consultationFlow.reset()
@@ -46,11 +51,11 @@ function handleFinish() {
               <small>{{ consultationFlow.selectedBranch.branch.address }}</small>
             </span>
           </li>
-          <li v-if="consultationFlow.checklist">
+          <li v-if="consultationFlow.checklist && neededItems.length > 0">
             <FileText :size="19" :stroke-width="2.3" />
             <span>
               <strong>{{ consultationFlow.checklist.taskTypeName }}</strong>
-              <small>{{ consultationFlow.checklist.items.map((item) => item.name).join(', ') }}</small>
+              <small>{{ neededItems.map((item) => item.name).join(', ') }}</small>
             </span>
           </li>
         </ul>

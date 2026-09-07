@@ -3,10 +3,13 @@ import type {
   AnalyzeResult,
   BranchRecommendationQuery,
   BranchRecommendationResult,
-  ChecklistResult,
+  ChecklistAnswerRequest,
+  ChecklistAnswerResult,
+  ChecklistQuestionsResult,
   ConsultationHistoryResult,
   DismissWarningRequest,
   DismissWarningResult,
+  ResolvedChecklistResult,
   TaskSelectionRequest,
   TaskSelectionResult,
   TaskType,
@@ -40,8 +43,23 @@ export const consultationService = {
     return response.data
   },
 
-  async getChecklist(taskTypeCode: string): Promise<ChecklistResult> {
-    const response = await apiClient.get<ChecklistResult>(`/task-types/${taskTypeCode}/checklist`)
+  async getChecklistQuestions(consultationId: string): Promise<ChecklistQuestionsResult> {
+    const response = await apiClient.get<ChecklistQuestionsResult>(
+      `/consultations/${consultationId}/checklist/questions`,
+    )
+    return response.data
+  },
+
+  async saveChecklistAnswers(consultationId: string, request: ChecklistAnswerRequest): Promise<ChecklistAnswerResult> {
+    const response = await apiClient.put<ChecklistAnswerResult>(
+      `/consultations/${consultationId}/checklist/answers`,
+      request,
+    )
+    return response.data
+  },
+
+  async getResolvedChecklist(consultationId: string): Promise<ResolvedChecklistResult> {
+    const response = await apiClient.get<ResolvedChecklistResult>(`/consultations/${consultationId}/checklist`)
     return response.data
   },
 

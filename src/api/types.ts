@@ -218,19 +218,45 @@ export interface DismissWarningResult {
   visitDecision: VisitDecision | null
 }
 
-export interface ChecklistResult {
-  taskTypeCode: string
-  taskTypeName: string
-  items: ChecklistItem[]
+export type ChecklistConditionCode = 'IS_PROXY' | 'USES_SEAL' | 'HAS_PASSBOOK' | 'IS_PASSBOOK_PASSWORD_CHANGE'
+
+export interface ChecklistQuestion {
+  conditionCode: ChecklistConditionCode
+  question: string
+  answerType: 'BOOLEAN'
+  answered: boolean
+  answer: boolean | null
 }
 
-export interface ChecklistItem {
+export interface ChecklistQuestionsResult {
+  questions: ChecklistQuestion[]
+}
+
+export interface ChecklistAnswerRequest {
+  answers: { conditionCode: ChecklistConditionCode; value: boolean }[]
+}
+
+export interface ChecklistAnswerResult {
+  savedCount: number
+}
+
+export type ChecklistItemStatus = 'INCLUDED' | 'EXCLUDED' | 'UNRESOLVED'
+
+export interface ResolvedChecklistItem {
   itemCode: string
   name: string
   easyDescription: string
   required: boolean
-  condition: string | null
+  status: ChecklistItemStatus
+  reason: string | null
   displayOrder: number
+}
+
+export interface ResolvedChecklistResult {
+  taskTypeCode: string
+  taskTypeName: string
+  resolved: boolean
+  items: ResolvedChecklistItem[]
 }
 
 export interface BranchRecommendationQuery {
