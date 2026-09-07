@@ -4,8 +4,10 @@ import { Keyboard, Mic, ShieldAlert } from '@lucide/vue'
 import { useRouter } from 'vue-router'
 import AppScreen from '@/components/common/AppScreen.vue'
 import { routePaths } from '@/router/routePaths'
+import { useConsultationFlowStore } from '@/stores/consultationFlow'
 
 const router = useRouter()
+const consultationFlow = useConsultationFlowStore()
 const isListening = ref(false)
 const micError = ref('')
 const barLevels = ref([0.38, 0.64, 0.88, 0.52, 0.7, 0.44])
@@ -14,15 +16,16 @@ let audioContext: AudioContext | null = null
 let analyser: AnalyserNode | null = null
 let stream: MediaStream | null = null
 let animationFrame = 0
+let recognition: SpeechRecognition | null = null
 
 const micButtonLabel = computed(() =>
-  isListening.value ? '듣고 있어요. 천천히 말씀해 주세요' : '동그라미를 누르고 말로 은행 업무를 알려주세요',
+  isListening.value ? '듣고 있어요. 그만하시려면 다시 눌러주세요' : '동그라미를 누르고 말로 은행 업무를 알려주세요',
 )
 
 async function handleVoiceStart() {
   if (isListening.value) {
+    recognition?.stop()
     stopMicrophone()
-    await router.push({ path: routePaths.utteranceConfirm, query: { method: 'voice' } })
     return
   }
 
@@ -35,10 +38,53 @@ async function handleVoiceStart() {
     micError.value = '마이크 권한 없이 예시 움직임으로 보여드릴게요.'
     startFallbackMotion()
   }
+
+  startSpeechRecognition()
+}
+
+function startSpeechRecognition() {
+  const RecognitionCtor = window.SpeechRecognition ?? window.webkitSpeechRecognition
+
+  if (!RecognitionCtor) {
+    micError.value = '이 브라우저는 음성 인식을 지원하지 않아요. 글자로 알려주세요.'
+    return
+  }
+
+  recognition = new RecognitionCtor()
+  recognition.lang = 'ko-KR'
+  recognition.continuous = false
+  recognition.interimResults = false
+  recognition.maxAlternatives = 1
+
+  recognition.onresult = (event) => {
+    const result = event.results[0]?.[0]
+    if (!result) return
+
+    consultationFlow.setUtterance({
+      utterance: result.transcript,
+      inputMethod: 'VOICE',
+      sttConfidence: result.confidence,
+    })
+    stopMicrophone()
+    void router.push(routePaths.utteranceConfirm)
+  }
+
+  recognition.onerror = () => {
+    micError.value = '잘 듣지 못했어요. 다시 눌러서 말씀해 주세요.'
+    stopMicrophone()
+  }
+
+  recognition.onend = () => {
+    if (isListening.value) {
+      stopMicrophone()
+    }
+  }
+
+  recognition.start()
 }
 
 function goTextInput() {
-  void router.push({ path: routePaths.input, query: { method: 'text' } })
+  void router.push(routePaths.input)
 }
 
 function goFraudWarning() {
@@ -107,6 +153,7 @@ function startFallbackMotion() {
 
 function stopMicrophone() {
   window.cancelAnimationFrame(animationFrame)
+  recognition?.abort()
   stream?.getTracks().forEach((track) => track.stop())
 
   if (audioContext?.state !== 'closed') {
@@ -116,6 +163,7 @@ function stopMicrophone() {
   stream = null
   analyser = null
   audioContext = null
+  recognition = null
   isListening.value = false
   barLevels.value = [0.38, 0.64, 0.88, 0.52, 0.7, 0.44]
 }
