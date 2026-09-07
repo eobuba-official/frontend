@@ -97,6 +97,22 @@ export interface MeResult extends User {
   guardians: Guardian[]
 }
 
+export interface GuardianAddRequest {
+  name: string
+  phoneNumber: string
+  relation: GuardianRelation
+}
+
+export interface GuardianAddResult {
+  guardian: Guardian
+  guardianCount: number
+}
+
+export interface GuardianDeleteResult {
+  guardianCount: number
+  fraudAlertDisabled: boolean
+}
+
 export interface AnalyzeRequest {
   utterance: string
   inputMethod: InputMethod

@@ -94,4 +94,37 @@ describe('authService (integration: client interceptors + service)', () => {
 
     expect(result.name).toBe('김순자')
   })
+
+  it('addGuardian returns the new guardian and updated count', async () => {
+    mock.onPost('/users/me/guardians').reply(200, {
+      success: true,
+      data: {
+        guardian: { guardianId: 2, name: '김철수', phoneNumber: '01098765432', relation: '아들' },
+        guardianCount: 2,
+      },
+      error: null,
+    })
+
+    const result = await authService.addGuardian({
+      name: '김철수',
+      phoneNumber: '01098765432',
+      relation: '아들',
+    })
+
+    expect(result.guardian.guardianId).toBe(2)
+    expect(result.guardianCount).toBe(2)
+  })
+
+  it('deleteGuardian returns the updated count and fraud alert status', async () => {
+    mock.onDelete('/users/me/guardians/2').reply(200, {
+      success: true,
+      data: { guardianCount: 0, fraudAlertDisabled: true },
+      error: null,
+    })
+
+    const result = await authService.deleteGuardian(2)
+
+    expect(result.guardianCount).toBe(0)
+    expect(result.fraudAlertDisabled).toBe(true)
+  })
 })

@@ -1,4 +1,7 @@
 import type {
+  GuardianAddRequest,
+  GuardianAddResult,
+  GuardianDeleteResult,
   MeResult,
   SignupRequest,
   SignupResult,
@@ -34,6 +37,16 @@ export const authService = {
 
   async getMe(): Promise<MeResult> {
     const response = await apiClient.get<MeResult>('/users/me')
+    return response.data
+  },
+
+  async addGuardian(request: GuardianAddRequest): Promise<GuardianAddResult> {
+    const response = await apiClient.post<GuardianAddResult>('/users/me/guardians', request)
+    return response.data
+  },
+
+  async deleteGuardian(guardianId: number): Promise<GuardianDeleteResult> {
+    const response = await apiClient.delete<GuardianDeleteResult>(`/users/me/guardians/${guardianId}`)
     return response.data
   },
 }

@@ -3,14 +3,15 @@ import { computed, onBeforeUnmount, ref } from 'vue'
 import { Keyboard, Mic, Settings, ShieldAlert } from '@lucide/vue'
 import { useRouter } from 'vue-router'
 import AppScreen from '@/components/common/AppScreen.vue'
+import logoMark from '@/assets/img/logo-mark.png'
 import { routePaths } from '@/router/routePaths'
 import { speechService } from '@/services/speechService'
 import { useConsultationFlowStore } from '@/stores/consultationFlow'
+import { isVoicePermissionEnabled } from '@/utils/permissionPreferences'
 import { encodeWav, mergeAudioChunks } from '@/utils/wavEncoder'
 
 const router = useRouter()
 const consultationFlow = useConsultationFlowStore()
-const userName = '김부바'
 const isListening = ref(false)
 const isProcessing = ref(false)
 const micError = ref('')
@@ -27,14 +28,6 @@ let audioChunks: Float32Array[] = []
 const micButtonLabel = computed(() => {
   if (isProcessing.value) return '확인하고 있어요. 잠시만 기다려주세요'
   return isListening.value ? '듣고 있어요. 그만하시려면 다시 눌러주세요' : '동그라미를 누르고 말로 은행 업무를 알려주세요'
-})
-const todayLabel = computed(() => {
-  const today = new Date()
-  return new Intl.DateTimeFormat('ko-KR', {
-    month: 'long',
-    day: 'numeric',
-    weekday: 'short',
-  }).format(today)
 })
 const micCoreScale = computed(() => {
   if (!isListening.value) {
@@ -58,6 +51,11 @@ async function handleVoiceStart() {
 }
 
 async function startRecording() {
+  if (!isVoicePermissionEnabled()) {
+    micError.value = '설정에서 음성 권한을 켜주세요.'
+    return
+  }
+
   try {
     mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true })
   } catch (error) {
@@ -173,21 +171,21 @@ onBeforeUnmount(closeAudioGraph)
       <div v-if="isListening" class="home__listening-overlay" aria-hidden="true"></div>
 
       <header class="home__header">
-        <div class="home__topline">
-          <span class="home__bank">KB</span>
-          <button class="home__settings-button" type="button" aria-label="설정" @click="goSettings">
-            <Settings :size="20" :stroke-width="2.4" />
-          </button>
+        <div class="home__brand">
+          <span
+            class="home__brand-avatar"
+            :style="{ backgroundImage: `url(${logoMark})` }"
+            aria-hidden="true"
+          ></span>
+          <div class="home__brand-copy">
+            <h1 class="home__brand-name">어부바</h1>
+            <p class="home__brand-tagline">말로 은행 업무를 도와드려요</p>
+          </div>
         </div>
 
-        <div class="home__profile">
-          <span class="home__logo" aria-hidden="true"></span>
-          <div class="home__profile-copy">
-            <h1 class="home__title">{{ userName }}</h1>
-            <p class="home__subtitle">좋은 하루 되세요 :)</p>
-          </div>
-          <time class="home__date">{{ todayLabel }}</time>
-        </div>
+        <button class="home__settings-button" type="button" aria-label="설정" @click="goSettings">
+          <Settings :size="20" :stroke-width="2.4" />
+        </button>
       </header>
 
       <section class="home__hero" aria-labelledby="home-title">
@@ -267,29 +265,51 @@ onBeforeUnmount(closeAudioGraph)
 
 .home__header {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
 }
 
-.home__topline,
-.home__profile {
+.home__brand {
   display: flex;
   align-items: center;
-  width: 100%;
+  gap: var(--space-3);
+  min-width: 0;
 }
 
-.home__topline {
-  justify-content: space-between;
+.home__brand-avatar {
+  flex: 0 0 52px;
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-pill);
+  background-color: var(--color-yellow-light);
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 58% auto;
 }
 
-.home__bank {
-  color: var(--color-ink-muted);
-  font-size: var(--text-sm);
+.home__brand-copy {
+  min-width: 0;
+}
+
+.home__brand-name {
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: 1.5rem;
   font-weight: 800;
+  line-height: 1.2;
+}
+
+.home__brand-tagline {
+  margin-top: 2px;
+  color: var(--color-ink-soft);
+  font-size: var(--text-base);
+  font-weight: 600;
 }
 
 .home__settings-button {
   display: grid;
+  flex-shrink: 0;
   place-items: center;
   width: 36px;
   height: 36px;
@@ -302,45 +322,6 @@ onBeforeUnmount(closeAudioGraph)
 
 .home__settings-button:hover {
   background: var(--color-surface-alt);
-}
-
-.home__profile {
-  gap: var(--space-3);
-}
-
-.home__logo {
-  flex: 0 0 42px;
-  width: 42px;
-  height: 42px;
-  border-radius: var(--radius-pill);
-  border: 1px solid var(--color-border);
-  background: transparent;
-}
-
-.home__profile-copy {
-  min-width: 0;
-}
-
-.home__title {
-  font-family: var(--font-body);
-  font-size: 2.2rem;
-  font-weight: 800;
-  line-height: 1.05;
-}
-
-.home__subtitle {
-  margin-top: var(--space-1);
-  color: var(--color-ink-soft);
-  font-size: var(--text-base);
-  font-weight: 600;
-}
-
-.home__date {
-  margin-left: auto;
-  color: var(--color-ink-soft);
-  font-size: var(--text-lg);
-  font-weight: 700;
-  white-space: nowrap;
 }
 
 .home__hero {
@@ -530,16 +511,12 @@ onBeforeUnmount(closeAudioGraph)
 }
 
 @media (max-width: 420px) {
-  .home__title {
-    font-size: 2rem;
+  .home__brand-name {
+    font-size: 1.3rem;
   }
 
-  .home__subtitle {
+  .home__brand-tagline {
     font-size: var(--text-sm);
-  }
-
-  .home__date {
-    font-size: var(--text-base);
   }
 
   .home__copy h2 {
