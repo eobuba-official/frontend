@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Building2, LocateFixed, MapPin, Star } from '@lucide/vue'
+import { LocateFixed, MapPin, Star } from '@lucide/vue'
 import { useRouter } from 'vue-router'
 import AppScreen from '@/components/common/AppScreen.vue'
 import BaseButton from '@/components/common/BaseButton.vue'

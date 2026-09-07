@@ -16,7 +16,13 @@ if (!consultationFlow.consultationId || consultationFlow.candidates.length === 0
   router.replace(routePaths.home)
 }
 
-const selectedCode = ref<string | null>(consultationFlow.candidates[0]?.taskTypeCode ?? null)
+const primaryCandidate = computed(() => consultationFlow.candidates[0] ?? null)
+const alternateCandidates = computed(() => consultationFlow.candidates.slice(1))
+const confidencePercent = computed(() =>
+  consultationFlow.confidence == null ? null : Math.round(consultationFlow.confidence * 100),
+)
+
+const selectedCode = ref<string | null>(primaryCandidate.value?.taskTypeCode ?? null)
 const isSubmitting = ref(false)
 const errorMessage = ref('')
 
@@ -48,20 +54,39 @@ async function handleConfirm() {
       <FlowHeader :current="2" :total="6" :back-to="routePaths.utteranceConfirm" />
     </template>
 
-    <section v-if="consultationFlow.candidates.length > 0" class="task-confirm">
-      <h1>어떤 업무가 맞을까요?</h1>
-      <p class="task-confirm__hint">가장 비슷한 것을 골라주세요.</p>
+    <section v-if="primaryCandidate" class="task-confirm">
+      <h1>말씀하신 업무는<br />이것으로 보여요</h1>
 
-      <div class="task-confirm__list">
-        <TaskOptionCard
-          v-for="candidate in consultationFlow.candidates"
-          :key="candidate.taskTypeCode"
-          :title="candidate.name"
-          :description="candidate.easyDescription"
-          :selected="selectedCode === candidate.taskTypeCode"
-          @click="selectedCode = candidate.taskTypeCode"
-        />
-      </div>
+      <button
+        class="task-confirm__primary"
+        :class="{ 'task-confirm__primary--selected': selectedCode === primaryCandidate.taskTypeCode }"
+        type="button"
+        @click="selectedCode = primaryCandidate.taskTypeCode"
+      >
+        <span class="task-confirm__primary-text">
+          <strong>{{ primaryCandidate.name }}</strong>
+          <span>{{ primaryCandidate.easyDescription }}</span>
+        </span>
+        <span v-if="confidencePercent !== null" class="task-confirm__confidence-badge">
+          확신도 {{ confidencePercent }}%
+        </span>
+      </button>
+
+      <p class="task-confirm__hint">맞으면 아래 버튼을 눌러주세요.</p>
+
+      <template v-if="alternateCandidates.length > 0">
+        <p class="task-confirm__alt-label">다른 업무일 수도 있어요</p>
+        <div class="task-confirm__list">
+          <TaskOptionCard
+            v-for="candidate in alternateCandidates"
+            :key="candidate.taskTypeCode"
+            :title="candidate.name"
+            :description="candidate.easyDescription"
+            :selected="selectedCode === candidate.taskTypeCode"
+            @click="selectedCode = candidate.taskTypeCode"
+          />
+        </div>
+      </template>
 
       <p v-if="errorMessage" class="task-confirm__error">{{ errorMessage }}</p>
     </section>
@@ -93,8 +118,61 @@ async function handleConfirm() {
   line-height: 1.3;
 }
 
+.task-confirm__primary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--card-padding);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+  text-align: left;
+  cursor: pointer;
+}
+
+.task-confirm__primary--selected {
+  border-color: var(--color-accent);
+}
+
+.task-confirm__primary-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.task-confirm__primary-text strong {
+  font-size: var(--text-lg);
+  font-weight: 800;
+}
+
+.task-confirm__primary-text span {
+  color: var(--color-ink-soft);
+  font-size: var(--text-sm);
+}
+
+.task-confirm__confidence-badge {
+  flex: none;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  background: var(--color-success-bg);
+  color: var(--color-success);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 .task-confirm__hint {
   color: var(--color-ink-soft);
+}
+
+.task-confirm__alt-label {
+  color: var(--color-ink-soft);
+  font-size: var(--text-sm);
+  font-weight: 700;
 }
 
 .task-confirm__list {
