@@ -113,7 +113,7 @@ export const mockAnalyzeFraud: AnalyzeResult = {
 
 export const mockChecklist: ChecklistResult = {
   taskTypeCode: 'PASSBOOK_REISSUE',
-  taskName: '통장 재발급',
+  taskTypeName: '통장 재발급',
   items: [
     {
       itemCode: 'ID_CARD',
@@ -121,6 +121,7 @@ export const mockChecklist: ChecklistResult = {
       easyDescription: '주민등록증이나 운전면허증',
       required: true,
       condition: null,
+      displayOrder: 1,
     },
     {
       itemCode: 'SEAL',
@@ -128,6 +129,7 @@ export const mockChecklist: ChecklistResult = {
       easyDescription: '통장 만들 때 쓴 도장',
       required: false,
       condition: '서명으로 만든 통장이면 필요 없어요',
+      displayOrder: 2,
     },
     {
       itemCode: 'POA',
@@ -135,6 +137,7 @@ export const mockChecklist: ChecklistResult = {
       easyDescription: '다른 사람이 대신 갈 때 필요한 종이',
       required: false,
       condition: '가족이 대신 방문하는 경우',
+      displayOrder: 3,
     },
     {
       itemCode: 'FAMILY_CERT',
@@ -142,6 +145,7 @@ export const mockChecklist: ChecklistResult = {
       easyDescription: '가족임을 증명하는 종이',
       required: false,
       condition: '가족이 대신 방문하는 경우',
+      displayOrder: 4,
     },
   ],
 }
@@ -164,6 +168,7 @@ export const mockBranchRecommendations: BranchRecommendationResult = {
         timeLabel: '오전 10시',
       },
       expectedWaitMinutes: 5,
+      congestionSource: 'MOCK',
       score: 91.5,
       sentence: '내일 오전 10시에 종로지점 방문을 추천해요. 대기가 가장 적은 시간이에요.',
     },
@@ -183,6 +188,7 @@ export const mockBranchRecommendations: BranchRecommendationResult = {
         timeLabel: '오후 2시',
       },
       expectedWaitMinutes: 12,
+      congestionSource: 'MOCK',
       score: 84,
       sentence: '내일 오후 2시 광화문지점도 좋아요. 거리가 가장 가까워요.',
     },
@@ -202,12 +208,12 @@ export const mockBranchRecommendations: BranchRecommendationResult = {
         timeLabel: '오후 3시',
       },
       expectedWaitMinutes: 25,
+      congestionSource: 'MOCK',
       score: 71,
       sentence: '오늘 꼭 가야 한다면 오후 3시 종로지점이 그나마 한가해요.',
     },
   ],
   weights: { wait: 0.7, distance: 0.3 },
-  congestionSource: 'MOCK',
 }
 
 export const mockTaskSelectionResult: TaskSelectionResult = {
@@ -236,10 +242,10 @@ export const mockConsultationHistory: ConsultationHistoryResult = {
   consultations: [
     {
       consultationId: 'mock-consultation-001',
-      utterance: '통장을 잃어버렸어',
       correctedUtterance: '통장을 잃어버렸어',
       status: 'TASK_CONFIRMED',
-      taskName: '통장 재발급',
+      taskTypeCode: 'PASSBOOK_REISSUE',
+      confidence: 0.93,
       createdAt: '2026-09-05T10:30:00',
     },
   ],

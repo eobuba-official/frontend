@@ -1,50 +1,54 @@
 import type {
   AnalyzeRequest,
+  AnalyzeResult,
   BranchRecommendationQuery,
+  BranchRecommendationResult,
+  ChecklistResult,
+  ConsultationHistoryResult,
   DismissWarningRequest,
   TaskSelectionRequest,
+  TaskSelectionResult,
 } from '@/api/types'
-import {
-  mockAnalyzeCandidates,
-  mockAnalyzeConfirmed,
-  mockAnalyzeFraud,
-  mockBranchRecommendations,
-  mockChecklist,
-  mockConsultationHistory,
-  mockTaskSelectionResult,
-  mockTaskTypes,
-} from '@/mocks/consultationMock'
+import { apiClient } from '@/api/client'
+import { mockAnalyzeConfirmed, mockAnalyzeFraud, mockTaskTypes } from '@/mocks/consultationMock'
 
 function delay<T>(value: T, ms = 250): Promise<T> {
   return new Promise((resolve) => window.setTimeout(() => resolve(value), ms))
 }
 
 export const consultationService = {
-  analyze(request: AnalyzeRequest) {
-    const utterance = request.utterance.trim()
+  async analyze(request: AnalyzeRequest): Promise<AnalyzeResult> {
+    const response = await apiClient.post<AnalyzeResult>('/analyze', request)
+    return response.data
+  },
 
-    if (utterance.includes('안전계좌') || utterance.includes('돈을 옮기')) {
-      return delay(mockAnalyzeFraud)
-    }
+  async selectTask(consultationId: string, request: TaskSelectionRequest): Promise<TaskSelectionResult> {
+    const response = await apiClient.post<TaskSelectionResult>(
+      `/consultations/${consultationId}/task-selection`,
+      request,
+    )
+    return response.data
+  },
 
-    if (utterance.includes('아들') || utterance.includes('대신')) {
-      return delay(mockAnalyzeCandidates)
-    }
+  async getChecklist(taskTypeCode: string): Promise<ChecklistResult> {
+    const response = await apiClient.get<ChecklistResult>(`/task-types/${taskTypeCode}/checklist`)
+    return response.data
+  },
 
-    return delay({
-      ...mockAnalyzeConfirmed,
-      classification: {
-        ...mockAnalyzeConfirmed.classification,
-        correctedUtterance: utterance || mockAnalyzeConfirmed.classification.correctedUtterance,
-        sttRecheckNeeded: request.inputMethod === 'VOICE',
-      },
+  async getBranchRecommendations(query: BranchRecommendationQuery): Promise<BranchRecommendationResult> {
+    const response = await apiClient.get<BranchRecommendationResult>('/branches/recommendations', {
+      params: query,
     })
+    return response.data
   },
 
-  selectTask(_consultationId: string, _request: TaskSelectionRequest) {
-    return delay(mockTaskSelectionResult)
+  async getConsultationHistory(): Promise<ConsultationHistoryResult> {
+    const response = await apiClient.get<ConsultationHistoryResult>('/users/me/consultations')
+    return response.data
   },
 
+  // No backend endpoint exists yet for these two — kept as mocks until the
+  // corresponding API is built (경고 해제, 업무 유형 전체 목록).
   dismissWarning(_consultationId: string, request: DismissWarningRequest) {
     if (!request.confirmed) {
       return Promise.reject(new Error('confirmed must be true'))
@@ -59,19 +63,7 @@ export const consultationService = {
     })
   },
 
-  getChecklist(_taskTypeCode: string, _consultationId?: string) {
-    return delay(mockChecklist)
-  },
-
-  getBranchRecommendations(_query: BranchRecommendationQuery) {
-    return delay(mockBranchRecommendations)
-  },
-
   getTaskTypes() {
     return delay(mockTaskTypes)
-  },
-
-  getConsultationHistory() {
-    return delay(mockConsultationHistory)
   },
 }
