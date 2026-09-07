@@ -349,9 +349,8 @@ onBeforeUnmount(closeAudioGraph)
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: var(--space-7);
-  min-height: 520px;
-  padding-block: var(--space-8);
+  gap: var(--space-3);
+  padding-block: var(--space-2);
   text-align: center;
 }
 

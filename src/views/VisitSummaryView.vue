@@ -24,7 +24,7 @@ function handleFinish() {
 <template>
   <AppScreen>
     <template #header>
-      <FlowHeader :current="6" :total="6" :back-to="routePaths.branches" />
+      <FlowHeader :current="6" :total="6" />
     </template>
 
     <section v-if="consultationFlow.selectedBranch" class="summary">
