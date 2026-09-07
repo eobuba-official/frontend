@@ -30,8 +30,8 @@ async function handleSubmit() {
     authFlow.setPhoneNumber(phoneNumber)
     authFlow.setMockCode(result.mockCode)
     await router.push(routePaths.smsVerify)
-  } catch {
-    errorMessage.value = '인증번호 요청에 실패했어요. 다시 시도해 주세요.'
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : '인증번호 요청에 실패했어요. 다시 시도해 주세요.'
   } finally {
     isSubmitting.value = false
   }

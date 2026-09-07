@@ -47,8 +47,8 @@ async function handleResend() {
     const result = await authService.requestSms({ phoneNumber: authFlow.phoneNumber })
     authFlow.setMockCode(result.mockCode)
     startTimer()
-  } catch {
-    errorMessage.value = '인증번호를 다시 보내지 못했어요.'
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : '인증번호를 다시 보내지 못했어요.'
   }
 }
 
@@ -68,8 +68,8 @@ async function handleVerify() {
 
     authFlow.setSignupToken(result.signupToken)
     await router.push(routePaths.guardianRegister)
-  } catch {
-    errorMessage.value = '인증번호가 맞지 않아요. 다시 확인해 주세요.'
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : '인증번호가 맞지 않아요. 다시 확인해 주세요.'
   } finally {
     isSubmitting.value = false
   }

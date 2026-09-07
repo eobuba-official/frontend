@@ -73,8 +73,7 @@ export interface SmsVerifyRequest {
 export interface SmsVerifyResult {
   registered: boolean
   accessToken: string | null
-  signupToken?: string
-  user?: User
+  signupToken: string | null
 }
 
 export interface SignupRequest {
@@ -84,8 +83,12 @@ export interface SignupRequest {
 }
 
 export interface SignupResult {
+  userId: number
   accessToken: string
-  user: User
+}
+
+export interface MeResult extends User {
+  guardians: Guardian[]
 }
 
 export interface AnalyzeRequest {
