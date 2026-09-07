@@ -1,160 +1,232 @@
 <script setup lang="ts">
-import { LocateFixed, MapPin, Star } from '@lucide/vue'
+import { computed, onMounted, ref, watch } from 'vue'
+import { LocateFixed, MapPin, Phone } from '@lucide/vue'
 import { useRouter } from 'vue-router'
 import AppScreen from '@/components/common/AppScreen.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import FlowHeader from '@/components/common/FlowHeader.vue'
 import { routePaths } from '@/router/routePaths'
 import { useConsultationFlowStore } from '@/stores/consultationFlow'
-import type { BranchRecommendation } from '@/api/types'
+import { geocodeAddress, loadKakaoMaps } from '@/utils/kakaoMaps'
+import type { KakaoMap, KakaoMarker } from '@/utils/kakaoMaps'
+import { isLocationPermissionEnabled } from '@/utils/permissionPreferences'
 
 const router = useRouter()
 const consultationFlow = useConsultationFlowStore()
 
-// TODO: this screen is a visual prototype only — the backend doesn't return branch
-// geo-coordinates yet, so the "map" (CSS-drawn) and its pins can't reflect real data.
-const selectedBranch: BranchRecommendation = {
-  rank: 1,
-  branch: {
-    branchId: 103,
-    name: 'KB국민은행 종로지점',
-    address: '서울 종로구 종로 1',
-    phone: '02-000-0000',
-    distanceKm: 1.2,
-  },
-  visitTime: { date: '2026-09-08', dayLabel: '내일', timeSlot: '10:00-11:00', timeLabel: '오전 10시' },
-  expectedWaitMinutes: 5,
-  congestionSource: 'MOCK',
-  score: 91.5,
-  sentence: '내일 오전 10시에 종로지점 방문을 추천해요. 대기가 가장 적은 시간이에요.',
+if (consultationFlow.recommendations.length === 0) {
+  router.replace(routePaths.branches)
 }
 
-const mapBranches = [
-  { name: 'KB국민은행 강남지점', x: 26, y: 46, selected: true },
-  { name: 'KB국민은행 신논현지점', x: 55, y: 28, selected: false },
-  { name: 'KB국민은행 역삼지점', x: 36, y: 72, selected: false },
-  { name: 'KB국민은행 삼성지점', x: 78, y: 66, selected: false },
-]
+const mapContainer = ref<HTMLDivElement | null>(null)
+const isLoadingMap = ref(true)
+const mapError = ref('')
+const hasMyLocation = ref(false)
+
+// same branch can appear more than once in the recommendation list (different
+// visit time slots) — the map should still only show one pin per physical branch
+const uniqueBranches = computed(() => {
+  const seenBranchIds = new Set<number>()
+  return consultationFlow.recommendations.filter((item) => {
+    if (seenBranchIds.has(item.branch.branchId)) return false
+    seenBranchIds.add(item.branch.branchId)
+    return true
+  })
+})
+
+const selectedRank = ref<number | null>(
+  consultationFlow.selectedBranch?.rank ?? uniqueBranches.value[0]?.rank ?? null,
+)
+
+const selected = computed(
+  () => consultationFlow.recommendations.find((item) => item.rank === selectedRank.value) ?? null,
+)
+
+let map: KakaoMap | null = null
+let myLocationMarker: KakaoMarker | null = null
+const markers: { rank: number; marker: KakaoMarker }[] = []
+
+function pinImageSrc() {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="30" height="38" viewBox="0 0 30 38"><path d="M15 0C6.7 0 0 6.7 0 15c0 10.5 15 23 15 23s15-12.5 15-23C30 6.7 23.3 0 15 0z" fill="#e8443f"/><circle cx="15" cy="15" r="6.2" fill="#ffffff"/></svg>`
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`
+}
+
+function pinImage(isSelected: boolean) {
+  const maps = window.kakao!.maps
+  const scale = isSelected ? 1.35 : 1
+  const width = Math.round(30 * scale)
+  const height = Math.round(38 * scale)
+  return new maps.MarkerImage(pinImageSrc(), new maps.Size(width, height), {
+    offset: new maps.Point(Math.round(width / 2), height),
+  })
+}
+
+function myLocationImage() {
+  const maps = window.kakao!.maps
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><circle cx="12" cy="12" r="8" fill="#2f6fed" stroke="#ffffff" stroke-width="3"/></svg>`
+  return new maps.MarkerImage(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`, new maps.Size(24, 24), {
+    offset: new maps.Point(12, 12),
+  })
+}
+
+async function initMap() {
+  isLoadingMap.value = true
+  mapError.value = ''
+
+  try {
+    await loadKakaoMaps()
+    const maps = window.kakao!.maps
+
+    const geocoded = await Promise.all(
+      uniqueBranches.value.map(async (item) => ({
+        item,
+        coords: await geocodeAddress(item.branch.address),
+      })),
+    )
+    const withCoords = geocoded.filter(
+      (entry): entry is { item: (typeof geocoded)[number]['item']; coords: { lat: number; lng: number } } =>
+        entry.coords !== null,
+    )
+
+    const first = withCoords[0]
+    if (!first || !mapContainer.value) {
+      mapError.value = '지점 위치를 지도에 표시하지 못했어요.'
+      return
+    }
+
+    const center = first.coords
+    const mapInstance = new maps.Map(mapContainer.value, {
+      center: new maps.LatLng(center.lat, center.lng),
+      level: 5,
+    })
+    map = mapInstance
+
+    withCoords.forEach(({ item, coords }) => {
+      const marker = new maps.Marker({
+        position: new maps.LatLng(coords.lat, coords.lng),
+        image: pinImage(item.rank === selectedRank.value),
+      })
+      marker.setMap(mapInstance)
+      maps.event.addListener(marker, 'click', () => {
+        selectedRank.value = item.rank
+      })
+      markers.push({ rank: item.rank, marker })
+    })
+
+    if (isLocationPermissionEnabled() && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const myPosition = new maps.LatLng(position.coords.latitude, position.coords.longitude)
+          const marker = new maps.Marker({ position: myPosition, image: myLocationImage() })
+          marker.setMap(mapInstance)
+          myLocationMarker = marker
+          hasMyLocation.value = true
+        },
+        () => {},
+        { timeout: 4000 },
+      )
+    }
+  } catch (error) {
+    mapError.value = error instanceof Error ? error.message : '지도를 불러오지 못했어요.'
+  } finally {
+    isLoadingMap.value = false
+  }
+}
+
+watch(selectedRank, () => {
+  markers.forEach(({ rank, marker }) => {
+    marker.setImage(pinImage(rank === selectedRank.value))
+  })
+})
+
+function recenterOnMe() {
+  if (!map || !myLocationMarker) return
+  map.setCenter(myLocationMarker.getPosition())
+}
 
 function selectBranch() {
-  consultationFlow.setSelectedBranch(selectedBranch)
+  if (!selected.value) return
+  consultationFlow.setSelectedBranch(selected.value)
   void router.push(routePaths.visitSummary)
 }
+
+function callBranch() {
+  if (!selected.value) return
+  window.location.href = `tel:${selected.value.branch.phone}`
+}
+
+onMounted(initMap)
 </script>
 
 <template>
-  <AppScreen>
+  <AppScreen no-padding>
     <template #header>
       <FlowHeader :current="5" :total="6" :back-to="routePaths.branches" label="지점 선택" hide-home />
     </template>
 
-    <section class="branch-map">
-      <div class="branch-map__heading">
-        <h1>지도에서 지점 찾기</h1>
-        <p>가까운 KB국민은행 지점을 지도에서 확인하고 선택해 주세요.</p>
-      </div>
+    <div class="branch-map">
+      <div ref="mapContainer" class="branch-map__kakao"></div>
 
-      <div class="branch-map__canvas" aria-label="mock 지도">
-        <div class="branch-map__roads" aria-hidden="true"></div>
-        <button class="branch-map__locate" type="button">
-          <LocateFixed :size="22" :stroke-width="2.4" />
-          내 위치
-        </button>
-        <span class="branch-map__current" aria-label="내 위치">
-          <span></span>
-          내 위치
-        </span>
-        <button
-          v-for="branch in mapBranches"
-          :key="branch.name"
-          class="branch-marker"
-          :class="{ 'branch-marker--selected': branch.selected }"
-          type="button"
-          :style="{ left: `${branch.x}%`, top: `${branch.y}%` }"
-          @click="router.push(routePaths.branchDetail)"
-        >
-          <span>KB</span>
-          <strong>{{ branch.name.replace('KB국민은행 ', '') }}</strong>
-        </button>
-      </div>
+      <p v-if="isLoadingMap" class="branch-map__status">지도를 불러오고 있어요...</p>
+      <p v-else-if="mapError" class="branch-map__status branch-map__status--error">{{ mapError }}</p>
 
-      <article v-if="selectedBranch" class="selected-branch">
+      <button class="branch-map__locate" type="button" :disabled="!hasMyLocation" @click="recenterOnMe">
+        <LocateFixed :size="22" :stroke-width="2.4" />
+        내 위치
+      </button>
+
+      <article v-if="selected" class="selected-branch">
         <div>
-          <h2>{{ selectedBranch.branch.name.replace('종로', '강남') }}</h2>
+          <h2>{{ selected.branch.name }}</h2>
           <p>
             <MapPin :size="20" :stroke-width="2.2" />
-            {{ selectedBranch.branch.distanceKm?.toFixed(1).replace('1.2', '0.7') ?? '0.7' }}km
+            <template v-if="selected.branch.distanceKm != null">{{ selected.branch.distanceKm }}km</template>
             <span></span>
-            서울특별시 강남구 강남대로 372
+            {{ selected.branch.address }}
           </p>
         </div>
-        <button class="selected-branch__favorite" type="button" aria-label="즐겨찾기">
-          <Star :size="30" :stroke-width="2" />
+        <button class="selected-branch__call" type="button" aria-label="지점에 전화하기" @click="callBranch">
+          <Phone :size="26" :stroke-width="2.1" />
         </button>
 
         <div class="selected-branch__actions">
-          <BaseButton variant="ghost" block @click="router.push(routePaths.branchDetail)">
-            상세보기
-          </BaseButton>
           <BaseButton block @click="selectBranch">이 지점 선택</BaseButton>
         </div>
       </article>
-    </section>
+    </div>
   </AppScreen>
 </template>
 
 <style scoped>
 .branch-map {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: var(--space-5);
-}
-
-.branch-map__heading {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
-
-.branch-map h1 {
-  color: var(--color-ink);
-  font-family: var(--font-body);
-  font-size: var(--text-2xl);
-  font-weight: 900;
-  line-height: 1.25;
-}
-
-.branch-map__heading p {
-  color: var(--color-ink-soft);
-  font-size: var(--text-xl);
-  font-weight: 600;
-  line-height: 1.45;
-}
-
-.branch-map__canvas {
   position: relative;
   flex: 1;
-  min-height: 430px;
-  overflow: hidden;
-  border-radius: var(--radius-lg);
-  background:
-    linear-gradient(62deg, transparent 0 47%, rgba(255, 255, 255, 0.92) 48% 53%, transparent 54%),
-    linear-gradient(120deg, transparent 0 38%, rgba(255, 255, 255, 0.9) 39% 45%, transparent 46%),
-    linear-gradient(16deg, transparent 0 55%, rgba(255, 255, 255, 0.95) 56% 60%, transparent 61%),
-    radial-gradient(circle at 20% 54%, rgba(255, 248, 222, 0.92) 0 12%, transparent 27%),
-    radial-gradient(circle at 78% 72%, rgba(215, 238, 209, 0.74) 0 12%, transparent 20%),
-    #eef0f3;
-  box-shadow: inset 0 0 0 1px var(--color-line);
+  min-height: 0;
 }
 
-.branch-map__roads {
+.branch-map__kakao {
   position: absolute;
   inset: 0;
-  background-image:
-    linear-gradient(92deg, transparent 0 14%, rgba(255, 255, 255, 0.76) 15% 16%, transparent 17% 38%, rgba(255, 255, 255, 0.76) 39% 40%, transparent 41% 100%),
-    linear-gradient(0deg, transparent 0 22%, rgba(255, 255, 255, 0.76) 23% 24%, transparent 25% 58%, rgba(255, 255, 255, 0.76) 59% 60%, transparent 61% 100%);
-  opacity: 0.86;
+  background: var(--color-surface-alt);
+}
+
+.branch-map__status {
+  position: absolute;
+  top: var(--space-5);
+  left: var(--space-5);
+  z-index: 2;
+  max-width: 62%;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-ink-soft);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  box-shadow: var(--shadow-card);
+}
+
+.branch-map__status--error {
+  color: var(--color-alert);
 }
 
 .branch-map__locate {
@@ -177,75 +249,22 @@ function selectBranch() {
   cursor: pointer;
 }
 
-.branch-map__current {
-  position: absolute;
-  left: 56%;
-  top: 54%;
-  z-index: 2;
-  display: grid;
-  justify-items: center;
-  gap: var(--space-1);
-  color: #2f6fed;
-  font-size: var(--text-sm);
-  font-weight: 800;
-}
-
-.branch-map__current span {
-  width: 34px;
-  height: 34px;
-  border: 7px solid rgba(255, 255, 255, 0.86);
-  border-radius: var(--radius-pill);
-  background: #2f6fed;
-  box-shadow: 0 0 0 22px rgba(47, 111, 237, 0.16);
-}
-
-.branch-marker {
-  position: absolute;
-  z-index: 2;
-  display: grid;
-  justify-items: center;
-  gap: var(--space-1);
-  width: 116px;
-  border: 0;
-  background: transparent;
-  color: var(--color-ink);
-  cursor: pointer;
-  transform: translate(-50%, -50%);
-}
-
-.branch-marker span {
-  display: grid;
-  place-items: center;
-  width: 42px;
-  height: 42px;
-  border: 3px solid var(--color-surface);
-  border-radius: var(--radius-pill);
-  background: var(--color-accent);
-  color: var(--color-accent-ink);
-  font-size: var(--text-xs);
-  font-weight: 900;
-  box-shadow: 0 10px 18px rgba(216, 170, 32, 0.22);
-}
-
-.branch-marker strong {
-  font-size: var(--text-sm);
-  font-weight: 900;
-  line-height: 1.2;
-}
-
-.branch-marker--selected span {
-  box-shadow:
-    0 0 0 18px rgba(255, 188, 0, 0.16),
-    0 10px 18px rgba(216, 170, 32, 0.22);
+.branch-map__locate:disabled {
+  color: var(--color-ink-faint);
+  cursor: not-allowed;
 }
 
 .selected-branch {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 2;
   display: grid;
   grid-template-columns: 1fr auto;
   gap: var(--space-4);
-  padding: var(--space-5);
-  border: 1px solid var(--color-line);
-  border-radius: 28px 28px var(--radius-lg) var(--radius-lg);
+  padding: var(--space-5) var(--screen-padding-x) calc(var(--space-5) + env(safe-area-inset-bottom, 0px));
+  border-radius: 28px 28px 0 0;
   background: var(--color-surface);
   box-shadow: 0 -8px 28px rgba(31, 35, 41, 0.08);
 }
@@ -274,7 +293,7 @@ function selectBranch() {
   background: var(--color-line);
 }
 
-.selected-branch__favorite {
+.selected-branch__call {
   display: grid;
   place-items: center;
   width: 60px;
@@ -282,14 +301,12 @@ function selectBranch() {
   border: 0;
   border-radius: var(--radius-pill);
   background: var(--color-yellow-faint);
-  color: var(--color-ink-soft);
+  color: var(--color-accent-deep);
   cursor: pointer;
 }
 
 .selected-branch__actions {
   display: grid;
   grid-column: 1 / -1;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-3);
 }
 </style>

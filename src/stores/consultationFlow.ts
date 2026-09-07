@@ -26,6 +26,7 @@ export const useConsultationFlowStore = defineStore('consultationFlow', () => {
   const fraudCheck = ref<FraudCheck | null>(null)
   const guidance = ref<string | null>(null)
   const checklist = ref<ResolvedChecklistResult | null>(null)
+  const recommendations = ref<BranchRecommendation[]>([])
   const selectedBranch = ref<BranchRecommendation | null>(null)
 
   function setUtterance(payload: { utterance: string; inputMethod: InputMethod; sttConfidence?: number | null }) {
@@ -57,6 +58,10 @@ export const useConsultationFlowStore = defineStore('consultationFlow', () => {
     checklist.value = result
   }
 
+  function setRecommendations(list: BranchRecommendation[]) {
+    recommendations.value = list
+  }
+
   function setSelectedBranch(branch: BranchRecommendation) {
     selectedBranch.value = branch
   }
@@ -74,6 +79,7 @@ export const useConsultationFlowStore = defineStore('consultationFlow', () => {
     fraudCheck.value = null
     guidance.value = null
     checklist.value = null
+    recommendations.value = []
     selectedBranch.value = null
   }
 
@@ -90,11 +96,13 @@ export const useConsultationFlowStore = defineStore('consultationFlow', () => {
     fraudCheck,
     guidance,
     checklist,
+    recommendations,
     selectedBranch,
     setUtterance,
     setAnalyzeResult,
     setTaskSelection,
     setChecklist,
+    setRecommendations,
     setSelectedBranch,
     reset,
   }

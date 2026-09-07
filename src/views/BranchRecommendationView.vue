@@ -56,6 +56,7 @@ onMounted(async () => {
     })
     recommendations.value = result.recommendations
     selectedRank.value = result.recommendations[0]?.rank ?? null
+    consultationFlow.setRecommendations(result.recommendations)
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '지점을 불러오지 못했어요.'
   } finally {
@@ -68,6 +69,13 @@ function handleConfirm() {
 
   consultationFlow.setSelectedBranch(selected.value)
   void router.push(routePaths.visitSummary)
+}
+
+function viewOnMap() {
+  if (selected.value) {
+    consultationFlow.setSelectedBranch(selected.value)
+  }
+  void router.push(routePaths.branchMap)
 }
 </script>
 
@@ -111,7 +119,7 @@ function handleConfirm() {
 
     <template #footer>
       <div class="branches__footer">
-        <BaseButton variant="ghost" block @click="router.push(routePaths.branchMap)">지도에서 보기</BaseButton>
+        <BaseButton variant="ghost" block @click="viewOnMap">지도에서 보기</BaseButton>
         <BaseButton block :disabled="!selected" @click="handleConfirm">이 시간으로 정하기</BaseButton>
       </div>
     </template>
