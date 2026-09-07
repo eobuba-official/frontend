@@ -8,6 +8,7 @@ import FlowHeader from '@/components/common/FlowHeader.vue'
 import { routePaths } from '@/router/routePaths'
 import { consultationService } from '@/services/consultationService'
 import { useConsultationFlowStore } from '@/stores/consultationFlow'
+import { isLocationPermissionEnabled } from '@/utils/permissionPreferences'
 import type { BranchRecommendation } from '@/api/types'
 
 const FALLBACK_LOCATION = { lat: 37.5665, lng: 126.978 }
@@ -29,7 +30,7 @@ const selected = computed(() => recommendations.value.find((item) => item.rank =
 
 function getCurrentLocation(): Promise<{ lat: number; lng: number }> {
   return new Promise((resolve) => {
-    if (!navigator.geolocation) {
+    if (!navigator.geolocation || !isLocationPermissionEnabled()) {
       resolve(FALLBACK_LOCATION)
       return
     }

@@ -11,7 +11,6 @@ import { useConsultationFlowStore } from '@/stores/consultationFlow'
 const router = useRouter()
 const consultationFlow = useConsultationFlowStore()
 const requestText = ref(consultationFlow.utterance)
-const isEditing = computed(() => Boolean(consultationFlow.utterance))
 
 const canSubmit = computed(() => requestText.value.trim().length > 0)
 
@@ -39,23 +38,12 @@ function submitInput() {
 <template>
   <AppScreen>
     <template #header>
-      <FlowHeader
-        :current="1"
-        :total="6"
-        :back-to="consultationFlow.utterance ? routePaths.utteranceConfirm : routePaths.home"
-        label="직접 입력"
-        hide-home
-      />
+      <FlowHeader :current="1" :total="6" label="직접 입력" hide-home />
     </template>
 
     <section class="manual-input">
-      <template v-if="isEditing">
-        <h1 class="manual-input__edit-heading">내용을 고쳐주세요</h1>
-      </template>
-      <template v-else>
-        <h1>어떤 업무를<br />도와드릴까요?</h1>
-        <p>궁금한 내용이나 필요한 업무를 편하게 입력해 주세요.</p>
-      </template>
+      <h1>필요하신 내용을 입력해주세요</h1>
+      <p>은행 업무나 궁금하신 내용을 편하게 적어주세요.</p>
 
       <label class="manual-input__field">
         <textarea
@@ -101,13 +89,8 @@ function submitInput() {
 .manual-input h1 {
   color: var(--color-ink);
   font-family: var(--font-body);
-  font-size: 2.4rem;
-  font-weight: 900;
-  line-height: 1.22;
-}
-
-.manual-input h1.manual-input__edit-heading {
   font-size: var(--text-2xl);
+  font-weight: 900;
   line-height: 1.3;
 }
 
