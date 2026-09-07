@@ -5,8 +5,14 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import FlowHeader from '@/components/common/FlowHeader.vue'
 import InfoCard from '@/components/common/InfoCard.vue'
 import { routePaths } from '@/router/routePaths'
+import { useConsultationFlowStore } from '@/stores/consultationFlow'
 
 const router = useRouter()
+const consultationFlow = useConsultationFlowStore()
+
+if (!consultationFlow.utterance) {
+  router.replace(routePaths.home)
+}
 </script>
 
 <template>
@@ -20,7 +26,7 @@ const router = useRouter()
 
       <InfoCard>
         <p class="confirm__label">이렇게 들었어요</p>
-        <strong class="confirm__utterance">통장을 잃어버렸는데<br />다시 만들고 싶어요</strong>
+        <strong class="confirm__utterance">{{ consultationFlow.utterance }}</strong>
       </InfoCard>
 
       <p class="confirm__hint">잘못 들었으면 아래에서 고쳐 주세요.</p>
@@ -29,7 +35,7 @@ const router = useRouter()
         <BaseButton variant="ghost" @click="router.push(routePaths.home)">
           다시 말하기
         </BaseButton>
-        <BaseButton variant="ghost" @click="router.push({ path: routePaths.input, query: { method: 'text' } })">
+        <BaseButton variant="ghost" @click="router.push(routePaths.input)">
           글자로 고치기
         </BaseButton>
       </div>

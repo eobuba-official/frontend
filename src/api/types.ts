@@ -198,7 +198,7 @@ export interface DismissWarningResult {
 
 export interface ChecklistResult {
   taskTypeCode: string
-  taskName: string
+  taskTypeName: string
   items: ChecklistItem[]
 }
 
@@ -208,6 +208,7 @@ export interface ChecklistItem {
   easyDescription: string
   required: boolean
   condition: string | null
+  displayOrder: number
 }
 
 export interface BranchRecommendationQuery {
@@ -219,13 +220,14 @@ export interface BranchRecommendationQuery {
   limit?: number
 }
 
+export type CongestionSource = 'MOCK' | 'FALLBACK'
+
 export interface BranchRecommendationResult {
   recommendations: BranchRecommendation[]
   weights: {
     wait: number
     distance: number
   }
-  congestionSource: 'MOCK' | 'SEOUL_RTD'
 }
 
 export interface BranchRecommendation {
@@ -233,6 +235,7 @@ export interface BranchRecommendation {
   branch: Branch
   visitTime: VisitTime
   expectedWaitMinutes: number
+  congestionSource: CongestionSource
   score: number
   sentence: string
 }
@@ -242,7 +245,7 @@ export interface Branch {
   name: string
   address: string
   phone: string
-  distanceKm: number
+  distanceKm: number | null
 }
 
 export interface VisitTime {
@@ -258,9 +261,9 @@ export interface ConsultationHistoryResult {
 
 export interface ConsultationHistoryItem {
   consultationId: string
-  utterance: string
   correctedUtterance: string
   status: ConsultationStatus
-  taskName: string | null
+  taskTypeCode: string | null
+  confidence: number | null
   createdAt: string
 }

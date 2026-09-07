@@ -1,14 +1,23 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { computed, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import AppScreen from '@/components/common/AppScreen.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import { routePaths } from '@/router/routePaths'
+import { useConsultationFlowStore } from '@/stores/consultationFlow'
 
-const route = useRoute()
 const router = useRouter()
+const consultationFlow = useConsultationFlowStore()
 
-const methodLabel = computed(() => (route.query.method === 'text' ? '글자 입력' : '음성 입력'))
+const text = ref('')
+const canSubmit = computed(() => text.value.trim().length > 0)
+
+function handleSubmit() {
+  if (!canSubmit.value) return
+
+  consultationFlow.setUtterance({ utterance: text.value.trim(), inputMethod: 'TEXT' })
+  void router.push(routePaths.utteranceConfirm)
+}
 </script>
 
 <template>
@@ -17,14 +26,20 @@ const methodLabel = computed(() => (route.query.method === 'text' ? '글자 입�
       <button class="back-button" type="button" @click="router.push(routePaths.home)">← 이전</button>
     </template>
 
-    <section class="placeholder">
-      <p class="placeholder__eyebrow">{{ methodLabel }}</p>
+    <section class="input">
       <h1>은행 업무를 알려주세요</h1>
-      <p>다음 단계에서 이 화면을 실제 입력 페이지로 구현할 예정입니다.</p>
+      <p>어떤 도움이 필요하신지 편하게 적어주세요.</p>
+
+      <textarea
+        v-model="text"
+        class="input__textarea"
+        rows="5"
+        placeholder="예) 통장을 잃어버려서 다시 만들고 싶어요"
+      ></textarea>
     </section>
 
     <template #footer>
-      <BaseButton block @click="router.push(routePaths.utteranceConfirm)">다음 화면 보기</BaseButton>
+      <BaseButton block :disabled="!canSubmit" @click="handleSubmit">다음</BaseButton>
     </template>
   </AppScreen>
 </template>
@@ -39,23 +54,40 @@ const methodLabel = computed(() => (route.query.method === 'text' ? '글자 입�
   cursor: pointer;
 }
 
-.placeholder {
+.input {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
 }
 
-.placeholder__eyebrow {
-  color: var(--color-accent-deep);
-  font-weight: 800;
-}
-
-.placeholder h1 {
+.input h1 {
   font-family: var(--font-body);
   font-size: var(--text-2xl);
 }
 
-.placeholder p:last-child {
+.input > p {
   color: var(--color-ink-soft);
+}
+
+.input__textarea {
+  width: 100%;
+  margin-top: var(--space-3);
+  padding: var(--space-4);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font: inherit;
+  font-size: var(--text-lg);
+  resize: vertical;
+}
+
+.input__textarea:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+
+.input__textarea::placeholder {
+  color: var(--color-ink-faint);
 }
 </style>

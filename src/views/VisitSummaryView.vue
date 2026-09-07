@@ -40,7 +40,7 @@ const recommendation = mockBranchRecommendations.recommendations[0]
           <li>
             <FileText :size="19" :stroke-width="2.3" />
             <span>
-              <strong>{{ mockChecklist.taskName }}</strong>
+              <strong>{{ mockChecklist.taskTypeName }}</strong>
               <small>{{ mockChecklist.items.map((item) => item.name).join(', ') }}</small>
             </span>
           </li>
