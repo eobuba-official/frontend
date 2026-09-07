@@ -4,21 +4,26 @@
 
 :root {
   /* ---------- color ---------- */
-  --color-bg: #fbf4e6;
+  --color-bg: #ffffff;
   --color-surface: #ffffff;
-  --color-surface-alt: #e6dcc7;
-  --color-ink: #33281c;
-  --color-ink-soft: #6f675d;
-  --color-ink-faint: #a8987f;
-  --color-accent: #f2a73b;
-  --color-accent-deep: #d98a1f;
-  --color-accent-ink: #4a2e05;
-  --color-line: #e6dcc7;
-  --color-alert: #c24b3f;
-  --color-alert-bg: #f7e4df;
-  --color-alert-line: #e6bdb3;
-  --color-success: #4c8b6e;
-  --color-success-bg: #e2ece3;
+  --color-surface-alt: #f5f6f7;
+  --color-surface-raised: #f8f8f8;
+  --color-yellow-light: #fff3bf;
+  --color-yellow-faint: #fff8de;
+  --color-ink: #1f2329;
+  --color-ink-soft: #4f5358;
+  --color-ink-faint: #90949a;
+  --color-ink-muted: #a1a5aa;
+  --color-accent: #ffbc00;
+  --color-accent-deep: #d8aa20;
+  --color-accent-ink: #1f2329;
+  --color-line: #eceef2;
+  --color-alert: #ef6a67;
+  --color-alert-deep: #c85c58;
+  --color-alert-bg: #fff0f0;
+  --color-alert-line: #ffd8d8;
+  --color-success: #d8aa20;
+  --color-success-bg: #fff8de;
   --color-focus: #2f6fed;
 
   /* ---------- type ---------- */
@@ -65,5 +70,5 @@
   --radius-pill: 999px;
 
   /* ---------- shadow ---------- */
-  --shadow-card: 0 1px 2px rgba(51, 40, 28, 0.06), 0 8px 20px -12px rgba(51, 40, 28, 0.18);
+  --shadow-card: 0 1px 2px rgba(31, 35, 41, 0.04), 0 8px 20px -16px rgba(31, 35, 41, 0.16);
 }

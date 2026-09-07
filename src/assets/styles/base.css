@@ -44,6 +44,13 @@ a {
 
 button {
   font-family: inherit;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease,
+    transform 140ms ease,
+    opacity 160ms ease;
 }
 
 :focus-visible {

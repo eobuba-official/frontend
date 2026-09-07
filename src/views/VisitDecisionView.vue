@@ -62,8 +62,8 @@ const checks = ['통장에 쓰신 도장이 있는지', '본인이 직접 가시
   height: 96px;
   margin-inline: auto;
   border-radius: var(--radius-pill);
-  background: var(--color-surface-alt);
-  color: var(--color-accent);
+  background: var(--color-yellow-light);
+  color: var(--color-accent-deep);
 }
 
 .visit-decision__copy {
@@ -103,6 +103,6 @@ const checks = ['통장에 쓰신 도장이 있는지', '본인이 직접 가시
 
 .check-list svg {
   flex-shrink: 0;
-  color: var(--color-success);
+  color: var(--color-accent-deep);
 }
 </style>

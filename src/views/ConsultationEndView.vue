@@ -44,8 +44,8 @@ const router = useRouter()
   width: 96px;
   height: 96px;
   border-radius: var(--radius-pill);
-  background: var(--color-surface-alt);
-  color: var(--color-accent);
+  background: var(--color-yellow-light);
+  color: var(--color-accent-deep);
 }
 
 .end h1 {

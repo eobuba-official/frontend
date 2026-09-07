@@ -28,6 +28,7 @@ const recommendations = mockBranchRecommendations.recommendations
           class="branch-card"
           :class="{ 'branch-card--best': item.rank === 1 }"
           type="button"
+          @click="router.push(routePaths.branchDetail)"
         >
           <span class="branch-card__rank">{{ item.rank }}</span>
           <span class="branch-card__body">
@@ -48,7 +49,7 @@ const recommendations = mockBranchRecommendations.recommendations
 
     <template #footer>
       <div class="branches__footer">
-        <BaseButton variant="ghost" block>지도에서 보기</BaseButton>
+        <BaseButton variant="ghost" block @click="router.push(routePaths.branchMap)">지도에서 보기</BaseButton>
         <BaseButton block @click="router.push(routePaths.visitSummary)">이 시간으로 정하기</BaseButton>
       </div>
     </template>
@@ -87,7 +88,7 @@ const recommendations = mockBranchRecommendations.recommendations
   gap: var(--space-3);
   width: 100%;
   padding: var(--space-4);
-  border: 1px solid transparent;
+  border: 1px solid var(--color-line);
   border-radius: var(--radius-md);
   background: var(--color-surface);
   box-shadow: var(--shadow-card);
@@ -98,6 +99,7 @@ const recommendations = mockBranchRecommendations.recommendations
 
 .branch-card--best {
   border-color: var(--color-accent);
+  background: var(--color-yellow-faint);
 }
 
 .branch-card__rank {
@@ -110,6 +112,11 @@ const recommendations = mockBranchRecommendations.recommendations
   background: var(--color-accent);
   color: var(--color-accent-ink);
   font-weight: 800;
+}
+
+.branch-card:not(.branch-card--best) .branch-card__rank {
+  background: var(--color-surface-alt);
+  color: var(--color-ink-soft);
 }
 
 .branch-card__body {

@@ -43,7 +43,7 @@ withDefaults(
 
 .task-option-card--selected {
   border-color: var(--color-accent);
-  background: var(--color-surface-alt);
+  background: var(--color-yellow-faint);
 }
 
 .task-option-card__content {

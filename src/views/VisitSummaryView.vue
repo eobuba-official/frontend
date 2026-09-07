@@ -88,7 +88,7 @@ const recommendation = mockBranchRecommendations.recommendations[0]
 
 .summary-list svg {
   flex-shrink: 0;
-  color: var(--color-accent);
+  color: var(--color-accent-deep);
 }
 
 .summary-list span {
@@ -113,7 +113,7 @@ const recommendation = mockBranchRecommendations.recommendations[0]
   height: 96px;
   margin-inline: auto;
   border-radius: var(--radius-pill);
-  background: var(--color-success-bg);
-  color: var(--color-success);
+  background: var(--color-yellow-light);
+  color: var(--color-accent-deep);
 }
 </style>

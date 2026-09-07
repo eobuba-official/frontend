@@ -22,7 +22,7 @@ const candidates = mockTaskTypes.slice(1)
     <section class="task-confirm">
       <h1>말씀하신 업무는<br />이것으로 보여요</h1>
 
-      <InfoCard v-if="mainTask">
+      <InfoCard v-if="mainTask" tone="accent">
         <div class="task-confirm__main">
           <div>
             <strong>{{ mainTask.name }}</strong>
@@ -99,8 +99,8 @@ const candidates = mockTaskTypes.slice(1)
   flex-shrink: 0;
   padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-pill);
-  background: var(--color-success-bg);
-  color: var(--color-success);
+  background: var(--color-yellow-faint);
+  color: var(--color-accent-deep);
   font-size: var(--text-xs);
   font-weight: 800;
 }
@@ -119,7 +119,7 @@ const candidates = mockTaskTypes.slice(1)
   width: 100%;
   min-height: 78px;
   padding: var(--space-4);
-  border: 0;
+  border: 1px solid var(--color-line);
   border-radius: var(--radius-md);
   background: var(--color-surface);
   box-shadow: var(--shadow-card);
@@ -134,8 +134,8 @@ const candidates = mockTaskTypes.slice(1)
   width: 38px;
   height: 38px;
   border-radius: var(--radius-pill);
-  background: var(--color-surface-alt);
-  color: var(--color-accent);
+  background: var(--color-yellow-light);
+  color: var(--color-accent-deep);
 }
 
 .task-confirm__footer {
