@@ -4,14 +4,30 @@ import { useRouter } from 'vue-router'
 import AppScreen from '@/components/common/AppScreen.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import FlowHeader from '@/components/common/FlowHeader.vue'
-import { mockBranchRecommendations } from '@/mocks'
 import { routePaths } from '@/router/routePaths'
 import { useConsultationFlowStore } from '@/stores/consultationFlow'
 import type { BranchRecommendation } from '@/api/types'
 
 const router = useRouter()
 const consultationFlow = useConsultationFlowStore()
-const selectedBranch = mockBranchRecommendations.recommendations[0] as BranchRecommendation
+
+// TODO: this screen is a visual prototype only — the backend doesn't return branch
+// geo-coordinates yet, so the "map" (CSS-drawn) and its pins can't reflect real data.
+const selectedBranch: BranchRecommendation = {
+  rank: 1,
+  branch: {
+    branchId: 103,
+    name: 'KB국민은행 종로지점',
+    address: '서울 종로구 종로 1',
+    phone: '02-000-0000',
+    distanceKm: 1.2,
+  },
+  visitTime: { date: '2026-09-08', dayLabel: '내일', timeSlot: '10:00-11:00', timeLabel: '오전 10시' },
+  expectedWaitMinutes: 5,
+  congestionSource: 'MOCK',
+  score: 91.5,
+  sentence: '내일 오전 10시에 종로지점 방문을 추천해요. 대기가 가장 적은 시간이에요.',
+}
 
 const mapBranches = [
   { name: 'KB국민은행 강남지점', x: 26, y: 46, selected: true },
