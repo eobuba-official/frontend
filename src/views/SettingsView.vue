@@ -9,6 +9,7 @@ import PhoneNumberField from '@/components/common/PhoneNumberField.vue'
 import { routePaths } from '@/router/routePaths'
 import { authService } from '@/services/authService'
 import {
+  isBrowserPermissionBlocked,
   isLocationPermissionEnabled,
   isVoicePermissionEnabled,
   setLocationPermissionEnabled,
@@ -116,7 +117,13 @@ async function confirmDeleteGuardian() {
 
 const locationEnabled = ref(isLocationPermissionEnabled())
 const voiceEnabled = ref(isVoicePermissionEnabled())
+const locationBlocked = ref(false)
+const voiceBlocked = ref(false)
 const pendingTurnOff = ref<'location' | 'voice' | null>(null)
+const blockedNotice = ref<'location' | 'voice' | null>(null)
+
+const locationSwitchOn = computed(() => locationEnabled.value && !locationBlocked.value)
+const voiceSwitchOn = computed(() => voiceEnabled.value && !voiceBlocked.value)
 
 const turnOffModalCopy = computed(() => {
   if (pendingTurnOff.value === 'location') {
@@ -128,7 +135,30 @@ const turnOffModalCopy = computed(() => {
   return null
 })
 
+const blockedNoticeCopy = computed(() => {
+  if (blockedNotice.value === 'location') {
+    return { title: '위치 권한이 차단돼 있어요', description: '브라우저 설정에서 이 사이트의 위치 접근을 허용해야 사용할 수 있어요.' }
+  }
+  if (blockedNotice.value === 'voice') {
+    return { title: '음성 권한이 차단돼 있어요', description: '브라우저 설정에서 이 사이트의 마이크 접근을 허용해야 사용할 수 있어요.' }
+  }
+  return null
+})
+
+onMounted(async () => {
+  const [micBlocked, geoBlocked] = await Promise.all([
+    isBrowserPermissionBlocked('microphone'),
+    isBrowserPermissionBlocked('geolocation'),
+  ])
+  voiceBlocked.value = micBlocked
+  locationBlocked.value = geoBlocked
+})
+
 function toggleLocation() {
+  if (locationBlocked.value) {
+    blockedNotice.value = 'location'
+    return
+  }
   if (locationEnabled.value) {
     pendingTurnOff.value = 'location'
     return
@@ -138,6 +168,10 @@ function toggleLocation() {
 }
 
 function toggleVoice() {
+  if (voiceBlocked.value) {
+    blockedNotice.value = 'voice'
+    return
+  }
   if (voiceEnabled.value) {
     pendingTurnOff.value = 'voice'
     return
@@ -161,6 +195,10 @@ function confirmTurnOff() {
   pendingTurnOff.value = null
 }
 
+function closeBlockedNotice() {
+  blockedNotice.value = null
+}
+
 function handleLogout() {
   clearAccessToken()
   void router.push(routePaths.login)
@@ -170,7 +208,7 @@ function handleLogout() {
 <template>
   <AppScreen>
     <template #header>
-      <button class="back-button" type="button" @click="router.push(routePaths.home)">← 이전</button>
+      <button class="back-button" type="button" @click="router.back()">← 이전</button>
     </template>
 
     <section class="settings">
@@ -239,7 +277,7 @@ function handleLogout() {
             class="settings-row"
             type="button"
             role="switch"
-            :aria-checked="locationEnabled"
+            :aria-checked="locationSwitchOn"
             @click="toggleLocation"
           >
             <span class="settings-row__icon" aria-hidden="true">
@@ -247,9 +285,9 @@ function handleLogout() {
             </span>
             <span class="settings-row__copy">
               <strong>위치 권한</strong>
-              <small>가까운 지점을 찾을 때 사용해요</small>
+              <small>{{ locationBlocked ? '브라우저에서 차단돼 있어요' : '가까운 지점을 찾을 때 사용해요' }}</small>
             </span>
-            <span class="switch" :class="{ 'switch--on': locationEnabled }" aria-hidden="true">
+            <span class="switch" :class="{ 'switch--on': locationSwitchOn }" aria-hidden="true">
               <span class="switch__thumb"></span>
             </span>
           </button>
@@ -260,7 +298,7 @@ function handleLogout() {
             class="settings-row"
             type="button"
             role="switch"
-            :aria-checked="voiceEnabled"
+            :aria-checked="voiceSwitchOn"
             @click="toggleVoice"
           >
             <span class="settings-row__icon" aria-hidden="true">
@@ -268,9 +306,9 @@ function handleLogout() {
             </span>
             <span class="settings-row__copy">
               <strong>음성 권한</strong>
-              <small>말로 요청할 때 사용해요</small>
+              <small>{{ voiceBlocked ? '브라우저에서 차단돼 있어요' : '말로 요청할 때 사용해요' }}</small>
             </span>
-            <span class="switch" :class="{ 'switch--on': voiceEnabled }" aria-hidden="true">
+            <span class="switch" :class="{ 'switch--on': voiceSwitchOn }" aria-hidden="true">
               <span class="switch__thumb"></span>
             </span>
           </button>
@@ -292,6 +330,16 @@ function handleLogout() {
         <div class="modal__actions">
           <BaseButton variant="ghost" block @click="cancelTurnOff">취소</BaseButton>
           <BaseButton block @click="confirmTurnOff">끌게요</BaseButton>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="blockedNoticeCopy" class="modal-overlay" @click.self="closeBlockedNotice">
+      <div class="modal" role="alertdialog" aria-modal="true" :aria-label="blockedNoticeCopy.title">
+        <h2>{{ blockedNoticeCopy.title }}</h2>
+        <p>{{ blockedNoticeCopy.description }}</p>
+        <div class="modal__actions modal__actions--single">
+          <BaseButton block @click="closeBlockedNotice">확인했어요</BaseButton>
         </div>
       </div>
     </div>
@@ -588,6 +636,10 @@ function handleLogout() {
   grid-template-columns: 1fr 1fr;
   gap: var(--space-3);
   margin-top: var(--space-5);
+}
+
+.modal__actions--single {
+  grid-template-columns: 1fr;
 }
 
 .modal-field {

@@ -3,7 +3,6 @@ import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import AppScreen from '@/components/common/AppScreen.vue'
 import InfoCard from '@/components/common/InfoCard.vue'
-import { routePaths } from '@/router/routePaths'
 import { consultationService } from '@/services/consultationService'
 import type { ConsultationHistoryItem, ConsultationStatus } from '@/api/types'
 
@@ -55,7 +54,7 @@ onMounted(async () => {
 <template>
   <AppScreen>
     <template #header>
-      <button class="back-button" type="button" @click="router.push(routePaths.settings)">← 이전</button>
+      <button class="back-button" type="button" @click="router.back()">← 이전</button>
     </template>
 
     <section class="history">

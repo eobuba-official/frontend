@@ -4,14 +4,18 @@ import { RouterView, useRoute } from 'vue-router'
 
 const route = useRoute()
 const transitionName = ref('page-slide-forward')
-let previousStep = Number(route.meta.step ?? 0)
+let previousPosition = historyPosition()
+
+function historyPosition() {
+  return Number((window.history.state as { position?: number } | null)?.position ?? 0)
+}
 
 watch(
   () => route.fullPath,
   () => {
-    const nextStep = Number(route.meta.step ?? 0)
-    transitionName.value = nextStep < previousStep ? 'page-slide-back' : 'page-slide-forward'
-    previousStep = nextStep
+    const nextPosition = historyPosition()
+    transitionName.value = nextPosition < previousPosition ? 'page-slide-back' : 'page-slide-forward'
+    previousPosition = nextPosition
   },
 )
 </script>
