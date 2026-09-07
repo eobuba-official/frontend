@@ -28,7 +28,7 @@ const heading = computed(() => {
 <template>
   <AppScreen>
     <template #header>
-      <FlowHeader :current="3" :total="6" :back-to="routePaths.utteranceConfirm" />
+      <FlowHeader :current="3" :total="6" />
     </template>
 
     <section v-if="consultationFlow.visitDecision" class="visit-decision">

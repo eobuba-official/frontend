@@ -55,7 +55,7 @@ onMounted(async () => {
 <template>
   <AppScreen>
     <template #header>
-      <button class="back-button" type="button" @click="router.push(routePaths.home)">← 이전</button>
+      <button class="back-button" type="button" @click="router.push(routePaths.settings)">← 이전</button>
     </template>
 
     <section class="history">

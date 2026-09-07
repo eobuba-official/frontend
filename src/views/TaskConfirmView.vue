@@ -51,7 +51,7 @@ async function handleConfirm() {
 <template>
   <AppScreen>
     <template #header>
-      <FlowHeader :current="2" :total="6" :back-to="routePaths.utteranceConfirm" />
+      <FlowHeader :current="2" :total="6" />
     </template>
 
     <section v-if="primaryCandidate" class="task-confirm">
