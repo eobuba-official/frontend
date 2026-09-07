@@ -206,18 +206,6 @@ export interface TaskSelectionResult {
   visitDecision: VisitDecision
 }
 
-export interface DismissWarningRequest {
-  confirmed: boolean
-}
-
-export interface DismissWarningResult {
-  consultationId: string
-  status: ConsultationStatus
-  warningDismissed: true
-  classification: Classification
-  visitDecision: VisitDecision | null
-}
-
 export type ChecklistConditionCode = 'IS_PROXY' | 'USES_SEAL' | 'HAS_PASSBOOK' | 'IS_PASSBOOK_PASSWORD_CHANGE'
 
 export interface ChecklistQuestion {
