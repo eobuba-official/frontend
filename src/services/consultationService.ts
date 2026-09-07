@@ -7,8 +7,6 @@ import type {
   ChecklistAnswerResult,
   ChecklistQuestionsResult,
   ConsultationHistoryResult,
-  DismissWarningRequest,
-  DismissWarningResult,
   ResolvedChecklistResult,
   TaskSelectionRequest,
   TaskSelectionResult,
@@ -26,18 +24,6 @@ export const consultationService = {
   async selectTask(consultationId: string, request: TaskSelectionRequest): Promise<TaskSelectionResult> {
     const response = await apiClient.post<TaskSelectionResult>(
       `/consultations/${consultationId}/task-selection`,
-      request,
-    )
-    return response.data
-  },
-
-  async dismissWarning(consultationId: string, request: DismissWarningRequest): Promise<DismissWarningResult> {
-    if (!request.confirmed) {
-      return Promise.reject(new Error('confirmed must be true'))
-    }
-
-    const response = await apiClient.post<DismissWarningResult>(
-      `/consultations/${consultationId}/dismiss-warning`,
       request,
     )
     return response.data

@@ -1,13 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useConsultationFlowStore } from '../consultationFlow'
-import type {
-  AnalyzeResult,
-  BranchRecommendation,
-  DismissWarningResult,
-  ResolvedChecklistResult,
-  TaskSelectionResult,
-} from '@/api/types'
+import type { AnalyzeResult, BranchRecommendation, ResolvedChecklistResult, TaskSelectionResult } from '@/api/types'
 
 const analyzeResult: AnalyzeResult = {
   consultationId: 'c1',
@@ -127,34 +121,6 @@ describe('consultationFlow store', () => {
     expect(store.visitDecision?.decision).toBe('CHECK_NEEDED')
     expect(store.candidates).toEqual([])
     expect(store.confidence).toBeNull()
-  })
-
-  it('clears the fraud warning and applies the classification after a warning is dismissed', () => {
-    const store = useConsultationFlowStore()
-    store.setAnalyzeResult(fraudResult)
-    expect(store.fraudCheck?.detected).toBe(true)
-
-    const dismissResult: DismissWarningResult = {
-      consultationId: 'c3',
-      status: 'TASK_CONFIRMED',
-      warningDismissed: true,
-      classification: {
-        status: 'CONFIRMED',
-        correctedUtterance: '안전계좌로 옮기래요',
-        confidence: 0.8,
-        task: { taskTypeCode: 'ACCOUNT_TRANSFER', name: '계좌이체', easyDescription: '다른 사람에게 돈을 보내는 일' },
-        candidates: [],
-        sttRecheckNeeded: false,
-      },
-      visitDecision: { decision: 'VISIT_REQUIRED', reason: '본인 확인 필요', remoteMethods: [], officialChannels: [] },
-    }
-
-    store.setDismissWarningResult(dismissResult)
-
-    expect(store.status).toBe('TASK_CONFIRMED')
-    expect(store.task?.taskTypeCode).toBe('ACCOUNT_TRANSFER')
-    expect(store.fraudCheck).toBeNull()
-    expect(store.guidance).toBeNull()
   })
 
   it('stores the checklist and the branch the user picked', () => {
