@@ -11,6 +11,8 @@ export const routePaths = {
   fraudDismissConfirm: '/fraud-warning/dismiss-confirm',
   remoteGuidance: '/remote-guidance',
   consultationEnd: '/consultation/end',
+  history: '/history',
+  settings: '/settings',
 } as const
 
 export type RouteKey = keyof typeof routePaths
