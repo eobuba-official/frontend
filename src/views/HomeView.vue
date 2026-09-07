@@ -12,9 +12,6 @@ const isListening = ref(false)
 const micError = ref('')
 const barLevels = ref([0.38, 0.64, 0.88, 0.52, 0.7, 0.44])
 
-let audioContext: AudioContext | null = null
-let analyser: AnalyserNode | null = null
-let stream: MediaStream | null = null
 let animationFrame = 0
 let recognition: SpeechRecognition | null = null
 
@@ -22,7 +19,7 @@ const micButtonLabel = computed(() =>
   isListening.value ? '듣고 있어요. 그만하시려면 다시 눌러주세요' : '동그라미를 누르고 말로 은행 업무를 알려주세요',
 )
 
-async function handleVoiceStart() {
+function handleVoiceStart() {
   if (isListening.value) {
     recognition?.stop()
     stopMicrophone()
@@ -31,14 +28,7 @@ async function handleVoiceStart() {
 
   isListening.value = true
   micError.value = ''
-
-  try {
-    await connectMicrophone()
-  } catch {
-    micError.value = '마이크 권한 없이 예시 움직임으로 보여드릴게요.'
-    startFallbackMotion()
-  }
-
+  startFallbackMotion()
   startSpeechRecognition()
 }
 
@@ -47,6 +37,7 @@ function startSpeechRecognition() {
 
   if (!RecognitionCtor) {
     micError.value = '이 브라우저는 음성 인식을 지원하지 않아요. 글자로 알려주세요.'
+    stopMicrophone()
     return
   }
 
@@ -80,7 +71,12 @@ function startSpeechRecognition() {
     }
   }
 
-  recognition.start()
+  try {
+    recognition.start()
+  } catch {
+    micError.value = '마이크를 시작하지 못했어요. 다시 눌러주세요.'
+    stopMicrophone()
+  }
 }
 
 function goTextInput() {
@@ -99,48 +95,6 @@ function goSettings() {
   void router.push(routePaths.settings)
 }
 
-async function connectMicrophone() {
-  if (!navigator.mediaDevices?.getUserMedia) {
-    throw new Error('Microphone API is not available')
-  }
-
-  stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-  audioContext = new AudioContext()
-  analyser = audioContext.createAnalyser()
-  analyser.fftSize = 256
-
-  const source = audioContext.createMediaStreamSource(stream)
-  source.connect(analyser)
-  animateFromMicrophone()
-}
-
-function animateFromMicrophone() {
-  if (!analyser) {
-    return
-  }
-
-  const samples = new Uint8Array(analyser.frequencyBinCount)
-
-  const tick = () => {
-    if (!analyser) {
-      return
-    }
-
-    analyser.getByteFrequencyData(samples)
-
-    const nextLevels = barLevels.value.map((_, index) => {
-      const sampleIndex = Math.min(index * 4 + 2, samples.length - 1)
-      const sample = samples[sampleIndex] ?? 0
-      return Math.max(0.24, Math.min(1, sample / 150))
-    })
-
-    barLevels.value = nextLevels
-    animationFrame = window.requestAnimationFrame(tick)
-  }
-
-  tick()
-}
-
 function startFallbackMotion() {
   const tick = () => {
     const now = Date.now() / 260
@@ -154,15 +108,6 @@ function startFallbackMotion() {
 function stopMicrophone() {
   window.cancelAnimationFrame(animationFrame)
   recognition?.abort()
-  stream?.getTracks().forEach((track) => track.stop())
-
-  if (audioContext?.state !== 'closed') {
-    void audioContext?.close()
-  }
-
-  stream = null
-  analyser = null
-  audioContext = null
   recognition = null
   isListening.value = false
   barLevels.value = [0.38, 0.64, 0.88, 0.52, 0.7, 0.44]
