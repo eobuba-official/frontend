@@ -105,6 +105,22 @@ describe('consultationService (integration: client interceptors + service)', () 
     expect(result.weights).toEqual({ wait: 0.6, distance: 0.4 })
   })
 
+  it('getTaskTypes maps the backend "code" field to taskTypeCode', async () => {
+    mock.onGet('/task-types').reply(200, {
+      success: true,
+      data: {
+        taskTypes: [{ code: 'PASSBOOK_REISSUE', name: '통장 재발급', easyDescription: '통장을 새로 만드는 일' }],
+      },
+      error: null,
+    })
+
+    const result = await consultationService.getTaskTypes()
+
+    expect(result).toEqual([
+      { taskTypeCode: 'PASSBOOK_REISSUE', name: '통장 재발급', easyDescription: '통장을 새로 만드는 일' },
+    ])
+  })
+
   it('getConsultationHistory returns the unwrapped list', async () => {
     mock.onGet('/users/me/consultations').reply(200, {
       success: true,

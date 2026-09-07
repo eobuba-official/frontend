@@ -190,7 +190,7 @@ onBeforeUnmount(stopMicrophone)
   flex-direction: column;
   min-height: 100vh;
   background: var(--color-bg);
-  padding: var(--space-5) var(--screen-padding-x) var(--space-7);
+  padding: var(--space-5) 0 var(--space-7);
 }
 
 .home__header {

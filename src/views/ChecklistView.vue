@@ -1,13 +1,36 @@
 <script setup lang="ts">
+import { onMounted, ref } from 'vue'
 import { CheckSquare } from '@lucide/vue'
 import { useRouter } from 'vue-router'
 import AppScreen from '@/components/common/AppScreen.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import FlowHeader from '@/components/common/FlowHeader.vue'
-import { mockChecklist } from '@/mocks'
 import { routePaths } from '@/router/routePaths'
+import { consultationService } from '@/services/consultationService'
+import { useConsultationFlowStore } from '@/stores/consultationFlow'
 
 const router = useRouter()
+const consultationFlow = useConsultationFlowStore()
+
+if (!consultationFlow.task) {
+  router.replace(routePaths.home)
+}
+
+const isLoading = ref(true)
+const errorMessage = ref('')
+
+onMounted(async () => {
+  if (!consultationFlow.task) return
+
+  try {
+    const result = await consultationService.getChecklist(consultationFlow.task.taskTypeCode)
+    consultationFlow.setChecklist(result)
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : '준비물을 불러오지 못했어요.'
+  } finally {
+    isLoading.value = false
+  }
+})
 </script>
 
 <template>
@@ -18,10 +41,11 @@ const router = useRouter()
 
     <section class="checklist">
       <h1>이것들을 챙겨 가세요</h1>
-      <p>하나씩 눌러서 확인해보세요.</p>
+      <p v-if="!errorMessage">하나씩 눌러서 확인해보세요.</p>
+      <p v-else class="checklist__error">{{ errorMessage }}</p>
 
-      <div class="checklist__items">
-        <label v-for="item in mockChecklist.items" :key="item.itemCode" class="prepare-item">
+      <div v-if="consultationFlow.checklist" class="checklist__items">
+        <label v-for="item in consultationFlow.checklist.items" :key="item.itemCode" class="prepare-item">
           <input type="checkbox" />
           <span class="prepare-item__box">
             <CheckSquare :size="20" :stroke-width="2.2" />
@@ -38,7 +62,9 @@ const router = useRouter()
     </section>
 
     <template #footer>
-      <BaseButton block @click="router.push(routePaths.branches)">지점 보기</BaseButton>
+      <BaseButton block :disabled="isLoading || !consultationFlow.checklist" @click="router.push(routePaths.branches)">
+        지점 보기
+      </BaseButton>
     </template>
   </AppScreen>
 </template>
@@ -58,6 +84,10 @@ const router = useRouter()
 
 .checklist > p {
   color: var(--color-ink-soft);
+}
+
+.checklist__error {
+  color: var(--color-alert);
 }
 
 .checklist__items {

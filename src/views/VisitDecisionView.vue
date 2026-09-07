@@ -1,16 +1,28 @@
 <script setup lang="ts">
-import { Check, Home } from '@lucide/vue'
+import { computed } from 'vue'
+import { Check, Home, PhoneCall, Smartphone } from '@lucide/vue'
 import { useRouter } from 'vue-router'
 import AppScreen from '@/components/common/AppScreen.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import FlowHeader from '@/components/common/FlowHeader.vue'
 import InfoCard from '@/components/common/InfoCard.vue'
-import { mockAnalyzeConfirmed } from '@/mocks'
 import { routePaths } from '@/router/routePaths'
+import { useConsultationFlowStore } from '@/stores/consultationFlow'
 
 const router = useRouter()
-const task = mockAnalyzeConfirmed.classification.task
-const checks = ['통장에 쓰신 도장이 있는지', '본인이 직접 가시는지', '신분증 유효기간이 남았는지']
+const consultationFlow = useConsultationFlowStore()
+
+if (!consultationFlow.visitDecision) {
+  router.replace(routePaths.home)
+}
+
+const decision = computed(() => consultationFlow.visitDecision?.decision)
+
+const heading = computed(() => {
+  if (decision.value === 'NO_VISIT') return '은행에 안 가셔도 돼요'
+  if (decision.value === 'CHECK_NEEDED') return '먼저 확인이 필요해요'
+  return '이 업무는\n은행에 가셔야 해요'
+})
 </script>
 
 <template>
@@ -19,28 +31,48 @@ const checks = ['통장에 쓰신 도장이 있는지', '본인이 직접 가시
       <FlowHeader :current="3" :total="6" :back-to="routePaths.taskConfirm" />
     </template>
 
-    <section class="visit-decision">
+    <section v-if="consultationFlow.visitDecision" class="visit-decision">
       <div class="visit-decision__icon" aria-hidden="true">
-        <Home :size="42" :stroke-width="1.8" />
+        <Smartphone v-if="decision === 'NO_VISIT'" :size="42" :stroke-width="1.8" />
+        <PhoneCall v-else-if="decision === 'CHECK_NEEDED'" :size="42" :stroke-width="1.8" />
+        <Home v-else :size="42" :stroke-width="1.8" />
       </div>
 
       <div class="visit-decision__copy">
-        <h1>이 업무는<br />은행에 가셔야 해요</h1>
-        <p>{{ mockAnalyzeConfirmed.visitDecision?.reason }}</p>
+        <h1 style="white-space: pre-line">{{ heading }}</h1>
+        <p>{{ consultationFlow.visitDecision.reason }}</p>
       </div>
 
-      <InfoCard title="가시기 전에 확인하세요">
+      <InfoCard v-if="decision === 'NO_VISIT'" title="이렇게 하실 수 있어요">
         <ul class="check-list">
-          <li v-for="check in checks" :key="check">
+          <li v-for="method in consultationFlow.visitDecision.remoteMethods" :key="method.channel">
             <Check :size="18" :stroke-width="2.4" />
-            {{ check }}
+            {{ method.easyDescription }}
           </li>
         </ul>
+      </InfoCard>
+
+      <InfoCard v-else-if="decision === 'CHECK_NEEDED'" title="여기서 확인해 보세요">
+        <ul class="check-list">
+          <li v-for="channel in consultationFlow.visitDecision.officialChannels" :key="channel.name">
+            <a :href="`tel:${channel.phone}`">
+              <PhoneCall :size="18" :stroke-width="2.4" />
+              {{ channel.name }} ({{ channel.phone }})
+            </a>
+          </li>
+        </ul>
+      </InfoCard>
+
+      <InfoCard v-else title="가시기 전에 확인하세요">
+        <p>{{ consultationFlow.task?.name }} 업무로 안내해 드릴게요.</p>
       </InfoCard>
     </section>
 
     <template #footer>
-      <BaseButton block @click="router.push(routePaths.checklist)">준비물 보기</BaseButton>
+      <BaseButton v-if="decision === 'VISIT_REQUIRED'" block @click="router.push(routePaths.checklist)">
+        준비물 보기
+      </BaseButton>
+      <BaseButton v-else block @click="router.push(routePaths.consultationEnd)">확인했어요</BaseButton>
     </template>
   </AppScreen>
 </template>
@@ -99,6 +131,14 @@ const checks = ['통장에 쓰신 도장이 있는지', '본인이 직접 가시
   gap: var(--space-2);
   color: var(--color-ink);
   font-weight: 700;
+}
+
+.check-list a {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: inherit;
+  text-decoration: none;
 }
 
 .check-list svg {
