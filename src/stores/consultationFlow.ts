@@ -5,6 +5,7 @@ import type {
   BranchRecommendation,
   ChecklistResult,
   ConsultationStatus,
+  DismissWarningResult,
   FraudCheck,
   InputMethod,
   TaskSelectionResult,
@@ -53,6 +54,16 @@ export const useConsultationFlowStore = defineStore('consultationFlow', () => {
     visitDecision.value = result.visitDecision
   }
 
+  function setDismissWarningResult(result: DismissWarningResult) {
+    status.value = result.status
+    task.value = result.classification.task
+    candidates.value = result.classification.candidates
+    confidence.value = result.classification.confidence
+    visitDecision.value = result.visitDecision
+    fraudCheck.value = null
+    guidance.value = null
+  }
+
   function setChecklist(result: ChecklistResult) {
     checklist.value = result
   }
@@ -94,6 +105,7 @@ export const useConsultationFlowStore = defineStore('consultationFlow', () => {
     setUtterance,
     setAnalyzeResult,
     setTaskSelection,
+    setDismissWarningResult,
     setChecklist,
     setSelectedBranch,
     reset,

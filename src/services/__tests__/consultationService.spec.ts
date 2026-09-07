@@ -121,6 +121,38 @@ describe('consultationService (integration: client interceptors + service)', () 
     ])
   })
 
+  it('dismissWarning rejects locally when confirmed is false, without calling the backend', async () => {
+    await expect(consultationService.dismissWarning('c1', { confirmed: false })).rejects.toThrow(
+      'confirmed must be true',
+    )
+  })
+
+  it('dismissWarning posts to the consultation-scoped endpoint', async () => {
+    mock.onPost('/consultations/c1/dismiss-warning').reply(200, {
+      success: true,
+      data: {
+        consultationId: 'c1',
+        status: 'TASK_CONFIRMED',
+        warningDismissed: true,
+        classification: {
+          status: 'CONFIRMED',
+          correctedUtterance: '안전계좌로 옮기래요',
+          confidence: 0.8,
+          task: { taskTypeCode: 'ACCOUNT_TRANSFER', name: '계좌이체', easyDescription: '다른 사람에게 돈을 보내는 일' },
+          candidates: [],
+          sttRecheckNeeded: false,
+        },
+        visitDecision: { decision: 'VISIT_REQUIRED', reason: '본인 확인 필요', remoteMethods: [], officialChannels: [] },
+      },
+      error: null,
+    })
+
+    const result = await consultationService.dismissWarning('c1', { confirmed: true })
+
+    expect(result.status).toBe('TASK_CONFIRMED')
+    expect(result.classification.task?.taskTypeCode).toBe('ACCOUNT_TRANSFER')
+  })
+
   it('getConsultationHistory returns the unwrapped list', async () => {
     mock.onGet('/users/me/consultations').reply(200, {
       success: true,
