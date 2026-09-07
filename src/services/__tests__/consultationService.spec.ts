@@ -65,20 +65,61 @@ describe('consultationService (integration: client interceptors + service)', () 
     expect(result.task.taskTypeCode).toBe('CARD_REISSUE')
   })
 
-  it('getChecklist requests the task-type-scoped endpoint', async () => {
-    mock.onGet('/task-types/PASSBOOK_REISSUE/checklist').reply(200, {
+  it('getChecklistQuestions requests the consultation-scoped questions endpoint', async () => {
+    mock.onGet('/consultations/c1/checklist/questions').reply(200, {
       success: true,
       data: {
-        taskTypeCode: 'PASSBOOK_REISSUE',
-        taskTypeName: '통장 재발급',
-        items: [{ itemCode: 'ID_CARD', name: '신분증', easyDescription: '', required: true, condition: null, displayOrder: 1 }],
+        questions: [
+          { conditionCode: 'IS_PROXY', question: '다른 사람이 대신 방문하나요?', answerType: 'BOOLEAN', answered: false, answer: null },
+        ],
       },
       error: null,
     })
 
-    const result = await consultationService.getChecklist('PASSBOOK_REISSUE')
+    const result = await consultationService.getChecklistQuestions('c1')
 
-    expect(result.taskTypeName).toBe('통장 재발급')
+    expect(result.questions).toHaveLength(1)
+    expect(result.questions[0].conditionCode).toBe('IS_PROXY')
+  })
+
+  it('saveChecklistAnswers puts the answers to the consultation-scoped endpoint', async () => {
+    mock.onPut('/consultations/c1/checklist/answers').reply((config) => {
+      expect(JSON.parse(config.data)).toEqual({ answers: [{ conditionCode: 'IS_PROXY', value: true }] })
+      return [200, { success: true, data: { savedCount: 1 }, error: null }]
+    })
+
+    const result = await consultationService.saveChecklistAnswers('c1', {
+      answers: [{ conditionCode: 'IS_PROXY', value: true }],
+    })
+
+    expect(result.savedCount).toBe(1)
+  })
+
+  it('getResolvedChecklist requests the consultation-scoped resolved checklist', async () => {
+    mock.onGet('/consultations/c1/checklist').reply(200, {
+      success: true,
+      data: {
+        taskTypeCode: 'PASSBOOK_REISSUE',
+        taskTypeName: '통장 재발급',
+        resolved: true,
+        items: [
+          {
+            itemCode: 'ID_CARD',
+            name: '신분증',
+            easyDescription: '',
+            required: true,
+            status: 'INCLUDED',
+            reason: '항상 필요한 준비물이에요.',
+            displayOrder: 1,
+          },
+        ],
+      },
+      error: null,
+    })
+
+    const result = await consultationService.getResolvedChecklist('c1')
+
+    expect(result.resolved).toBe(true)
     expect(result.items).toHaveLength(1)
   })
 

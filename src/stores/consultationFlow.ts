@@ -3,11 +3,11 @@ import { defineStore } from 'pinia'
 import type {
   AnalyzeResult,
   BranchRecommendation,
-  ChecklistResult,
   ConsultationStatus,
   DismissWarningResult,
   FraudCheck,
   InputMethod,
+  ResolvedChecklistResult,
   TaskSelectionResult,
   TaskType,
   VisitDecision,
@@ -26,7 +26,7 @@ export const useConsultationFlowStore = defineStore('consultationFlow', () => {
   const visitDecision = ref<VisitDecision | null>(null)
   const fraudCheck = ref<FraudCheck | null>(null)
   const guidance = ref<string | null>(null)
-  const checklist = ref<ChecklistResult | null>(null)
+  const checklist = ref<ResolvedChecklistResult | null>(null)
   const selectedBranch = ref<BranchRecommendation | null>(null)
 
   function setUtterance(payload: { utterance: string; inputMethod: InputMethod; sttConfidence?: number | null }) {
@@ -64,7 +64,7 @@ export const useConsultationFlowStore = defineStore('consultationFlow', () => {
     guidance.value = null
   }
 
-  function setChecklist(result: ChecklistResult) {
+  function setChecklist(result: ResolvedChecklistResult) {
     checklist.value = result
   }
 
