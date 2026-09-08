@@ -18,7 +18,9 @@ describe('consultationService (integration: client interceptors + service)', () 
         fraudCheck: { detected: false, dismissible: false, patterns: [], safetyActions: [], guardianNotification: null },
         classification: {
           status: 'CONFIRMED',
+          originalUtterance: '통장을 잃어버렸어요',
           correctedUtterance: '통장을 잃어버렸어요',
+          correctionApplied: false,
           confidence: 0.9,
           task: { taskTypeCode: 'PASSBOOK_REISSUE', name: '통장 재발급', easyDescription: '통장을 새로 만드는 일' },
           candidates: [],

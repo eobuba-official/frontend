@@ -162,7 +162,9 @@ export interface NotifiedGuardian {
 
 export interface Classification {
   status: ClassificationStatus
+  originalUtterance: string
   correctedUtterance: string
+  correctionApplied: boolean
   confidence: number | null
   task: TaskType | null
   candidates: TaskType[]

@@ -5,7 +5,7 @@ import { useRouter } from 'vue-router'
 import AppScreen from '@/components/common/AppScreen.vue'
 import logoMark from '@/assets/img/logo-mark.png'
 import { routePaths } from '@/router/routePaths'
-import { speechService } from '@/services/speechService'
+import { speechAnalysisService } from '@/services/speechAnalysisService'
 import { useConsultationFlowStore } from '@/stores/consultationFlow'
 import { isVoicePermissionEnabled } from '@/utils/permissionPreferences'
 import { encodeWav, mergeAudioChunks } from '@/utils/wavEncoder'
@@ -94,15 +94,18 @@ async function stopRecordingAndTranscribe() {
 
   try {
     const wavBlob = encodeWav(samples, sampleRate)
-    const result = await speechService.transcribe(wavBlob)
+    const { transcription, analysis } = await speechAnalysisService.transcribeAndAnalyze(wavBlob)
     consultationFlow.setUtterance({
-      utterance: result.transcript,
+      utterance: transcription.transcript,
       inputMethod: 'VOICE',
-      sttConfidence: result.sttConfidence,
+      sttConfidence: transcription.sttConfidence,
     })
-    await router.push(routePaths.utteranceConfirm)
+    consultationFlow.setAnalyzeResult(analysis)
+    await router.push(
+      analysis.status === 'FRAUD_WARNING' ? routePaths.fraudWarning : routePaths.utteranceConfirm,
+    )
   } catch {
-    micError.value = '잘 듣지 못했어요. 다시 눌러서 말씀해 주세요.'
+    micError.value = '음성을 분석하지 못했어요. 다시 눌러서 말씀해 주세요.'
   } finally {
     isProcessing.value = false
   }
