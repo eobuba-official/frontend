@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { ChevronLeft, Landmark, PhoneCall, PhoneOff, ShieldAlert, Users } from '@lucide/vue'
+import { ChevronLeft, Landmark, PhoneCall, PhoneOff, ShieldAlert, User } from '@lucide/vue'
 import { useRouter } from 'vue-router'
 import AppScreen from '@/components/common/AppScreen.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
@@ -26,7 +26,7 @@ const summaryLine = computed(
 function iconForSafetyAction(action: string) {
   if (action.includes('전화') && (action.includes('끊') || action.includes('말고'))) return PhoneOff
   if (action.includes('대표번호') || action.includes('확인')) return Landmark
-  if (action.includes('가족')) return Users
+  if (action.includes('가족')) return User
   return ShieldAlert
 }
 
@@ -157,7 +157,7 @@ onMounted(async () => {
         <ul v-else-if="guardians.length > 0" class="fraud__steps">
           <li v-for="guardian in guardians" :key="guardian.guardianId" class="fraud__guardian-row">
             <span class="fraud__step-icon" aria-hidden="true">
-              <Users :size="20" :stroke-width="2.2" />
+              <User :size="20" :stroke-width="2.2" />
             </span>
             <span class="fraud__guardian-info">
               <strong>{{ guardian.name }} ({{ guardian.relation }})</strong>
