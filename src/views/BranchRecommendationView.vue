@@ -49,12 +49,15 @@ onMounted(async () => {
 
   try {
     const { lat, lng } = await getCurrentLocation()
-    const result = await consultationService.getBranchRecommendations({
-      consultationId: consultationFlow.consultationId,
-      taskTypeCode: consultationFlow.task.taskTypeCode,
-      lat,
-      lng,
-    })
+    const result = await consultationService.getBranchRecommendationsWithFallback(
+      {
+        consultationId: consultationFlow.consultationId,
+        taskTypeCode: consultationFlow.task.taskTypeCode,
+        lat,
+        lng,
+      },
+      FALLBACK_LOCATION,
+    )
     recommendations.value = result.recommendations
     selectedRank.value = result.recommendations[0]?.rank ?? null
     consultationFlow.setRecommendations(result.recommendations)

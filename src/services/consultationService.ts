@@ -56,6 +56,24 @@ export const consultationService = {
     return response.data
   },
 
+  // The seeded branch data only covers a handful of central-Seoul locations, so a
+  // GPS-based query from anywhere else legitimately comes back empty. Retry once
+  // against the fallback location before surfacing "no branches nearby" to the user.
+  async getBranchRecommendationsWithFallback(
+    query: BranchRecommendationQuery,
+    fallbackLocation: { lat: number; lng: number },
+  ): Promise<BranchRecommendationResult> {
+    const result = await consultationService.getBranchRecommendations(query)
+    if (result.recommendations.length > 0) return result
+    if (query.lat === fallbackLocation.lat && query.lng === fallbackLocation.lng) return result
+
+    return consultationService.getBranchRecommendations({
+      ...query,
+      lat: fallbackLocation.lat,
+      lng: fallbackLocation.lng,
+    })
+  },
+
   async getTaskTypes(): Promise<TaskType[]> {
     const response = await apiClient.get<TaskTypeListResult>('/task-types')
     return response.data.taskTypes.map((item) => ({
