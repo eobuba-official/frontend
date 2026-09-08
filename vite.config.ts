@@ -17,8 +17,9 @@ export default defineConfig({
   },
   server: {
     proxy: {
+      // 기본은 로컬 백엔드. EC2로 붙으려면: VITE_API_TARGET=http://15.164.38.68 npm run dev
       '/api': {
-        target: 'http://localhost:8080',
+        target: process.env.VITE_API_TARGET || 'http://localhost:8080',
         changeOrigin: true,
       },
     },
