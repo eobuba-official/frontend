@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { Landmark, Phone, PhoneOff, ShieldAlert, Users } from '@lucide/vue'
+import { ChevronLeft, Landmark, PhoneCall, PhoneOff, ShieldAlert, User } from '@lucide/vue'
 import { useRouter } from 'vue-router'
 import AppScreen from '@/components/common/AppScreen.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
@@ -26,7 +26,7 @@ const summaryLine = computed(
 function iconForSafetyAction(action: string) {
   if (action.includes('전화') && (action.includes('끊') || action.includes('말고'))) return PhoneOff
   if (action.includes('대표번호') || action.includes('확인')) return Landmark
-  if (action.includes('가족')) return Users
+  if (action.includes('가족')) return User
   return ShieldAlert
 }
 
@@ -78,11 +78,16 @@ onMounted(async () => {
         <button
           class="fraud-header__button"
           type="button"
-          @click="router.push(consultationFlow.fraudCheck ? routePaths.utteranceConfirm : routePaths.home)"
+          @click="
+            router.push(consultationFlow.fraudCheck ? routePaths.utteranceConfirm : routePaths.home)
+          "
         >
-          ← 뒤로
+          <ChevronLeft :size="18" :stroke-width="2.4" />
+          뒤로
         </button>
-        <button class="fraud-header__button" type="button" @click="router.push(routePaths.home)">처음으로</button>
+        <button class="fraud-header__button" type="button" @click="router.push(routePaths.home)">
+          처음으로
+        </button>
       </div>
     </template>
 
@@ -100,7 +105,11 @@ onMounted(async () => {
       <div class="fraud__card">
         <h2>이런 표현을 들으셨나요?</h2>
         <ul class="fraud__phrases">
-          <li v-for="pattern in consultationFlow.fraudCheck.patterns" :key="pattern.type" class="fraud__phrase">
+          <li
+            v-for="pattern in consultationFlow.fraudCheck.patterns"
+            :key="pattern.type"
+            class="fraud__phrase"
+          >
             <span class="fraud__phrase-icon" aria-hidden="true">!</span>
             <span>{{ pattern.evidence }}</span>
           </li>
@@ -111,7 +120,11 @@ onMounted(async () => {
       <div v-if="consultationFlow.fraudCheck.safetyActions.length > 0" class="fraud__card">
         <h2>안전하게 확인하는 방법</h2>
         <ul class="fraud__steps">
-          <li v-for="action in consultationFlow.fraudCheck.safetyActions" :key="action.order" class="fraud__step">
+          <li
+            v-for="action in consultationFlow.fraudCheck.safetyActions"
+            :key="action.order"
+            class="fraud__step"
+          >
             <span class="fraud__step-icon" aria-hidden="true">
               <component :is="iconForSafetyAction(action.action)" :size="20" :stroke-width="2.2" />
             </span>
@@ -130,15 +143,6 @@ onMounted(async () => {
     </section>
 
     <section v-else class="fraud">
-      <div class="fraud__stop">
-        <div class="fraud__stop-icon" aria-hidden="true">
-          <ShieldAlert :size="26" :stroke-width="2" />
-        </div>
-        <div>
-          <strong>보이스피싱 예방</strong>
-        </div>
-      </div>
-
       <WarningBox
         title="수상한 전화는 바로 확인하세요"
         description="은행은 안전계좌로 돈을 옮기라고 요구하지 않습니다."
@@ -147,11 +151,13 @@ onMounted(async () => {
       <div class="fraud__card">
         <h2>수상하면 가족에게 바로 알리세요</h2>
         <p v-if="isLoadingGuardians" class="fraud__status">불러오는 중...</p>
-        <p v-else-if="guardiansError" class="fraud__status fraud__status--error">{{ guardiansError }}</p>
+        <p v-else-if="guardiansError" class="fraud__status fraud__status--error">
+          {{ guardiansError }}
+        </p>
         <ul v-else-if="guardians.length > 0" class="fraud__steps">
           <li v-for="guardian in guardians" :key="guardian.guardianId" class="fraud__guardian-row">
             <span class="fraud__step-icon" aria-hidden="true">
-              <Users :size="20" :stroke-width="2.2" />
+              <User :size="20" :stroke-width="2.2" />
             </span>
             <span class="fraud__guardian-info">
               <strong>{{ guardian.name }} ({{ guardian.relation }})</strong>
@@ -163,20 +169,26 @@ onMounted(async () => {
               :aria-label="`${guardian.name}에게 전화하기`"
               @click="callGuardian(guardian.phoneNumber)"
             >
-              <Phone :size="18" :stroke-width="2.2" />
+              <PhoneCall :size="18" :stroke-width="2.2" />
             </button>
           </li>
         </ul>
         <div v-else class="fraud__empty">
           <p>등록된 가족이 없어요. 가족을 등록해두면 더 안전해요.</p>
-          <BaseButton variant="ghost" block @click="router.push(routePaths.settings)">가족 등록하러 가기</BaseButton>
+          <BaseButton variant="ghost" block @click="router.push(routePaths.settings)"
+            >가족 등록하러 가기</BaseButton
+          >
         </div>
       </div>
 
       <div v-if="recentFraudHistory.length > 0" class="fraud__card">
         <h2>예전에 이런 전화 조심하라고 알려드렸어요</h2>
         <ul class="fraud__history">
-          <li v-for="item in recentFraudHistory" :key="item.consultationId" class="fraud__history-item">
+          <li
+            v-for="item in recentFraudHistory"
+            :key="item.consultationId"
+            class="fraud__history-item"
+          >
             <small>{{ formatDate(item.createdAt) }}</small>
             <strong>{{ item.correctedUtterance }}</strong>
           </li>
@@ -187,7 +199,7 @@ onMounted(async () => {
     <template #footer>
       <BaseButton variant="alert" block @click="callFss">
         <template #icon>
-          <PhoneOff :size="20" :stroke-width="2.2" />
+          <PhoneCall :size="20" :stroke-width="2.2" />
         </template>
         금융감독원 1332에 전화하기
       </BaseButton>
@@ -200,14 +212,19 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  color: var(--color-ink-soft);
+  font-size: var(--text-sm);
+  font-weight: 700;
 }
 
 .fraud-header__button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
   border: 0;
   background: transparent;
-  color: var(--color-ink-soft);
+  color: inherit;
   font: inherit;
-  font-weight: 700;
   cursor: pointer;
 }
 
@@ -429,5 +446,4 @@ onMounted(async () => {
 .fraud__history-item strong {
   font-weight: 700;
 }
-
 </style>

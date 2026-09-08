@@ -331,10 +331,6 @@ onBeforeUnmount(closeAudioGraph)
   gap: var(--space-3);
 }
 
-.home--listening .home__copy {
-  color: #ffffff;
-}
-
 .home__copy h2 {
   font-family: var(--font-body);
   font-size: var(--text-hero);
@@ -342,18 +338,10 @@ onBeforeUnmount(closeAudioGraph)
   line-height: 1.18;
 }
 
-.home--listening .home__copy h2 {
-  color: #ffffff;
-}
-
 .home__copy p {
   color: var(--color-ink-soft);
   font-size: var(--text-xl);
   font-weight: 600;
-}
-
-.home--listening .home__copy p {
-  color: rgba(255, 255, 255, 0.86);
 }
 
 .home__copy small {

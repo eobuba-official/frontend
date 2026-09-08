@@ -25,6 +25,8 @@ function handleLogout() {
     <section class="settings">
       <h1>설정</h1>
 
+      <GuardianSection />
+
       <div class="settings-group">
         <p class="settings-group__label">바로가기</p>
         <div class="settings-card">
@@ -41,7 +43,6 @@ function handleLogout() {
         </div>
       </div>
 
-      <GuardianSection />
       <PermissionSection />
 
       <BaseButton variant="ghost" block @click="handleLogout">

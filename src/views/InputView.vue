@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { ChevronRight, CreditCard, PiggyBank, UserRoundPlus } from '@lucide/vue'
+import { BookOpen, ChevronRight, CreditCard, PiggyBank, UserRoundPlus } from '@lucide/vue'
 import { useRouter } from 'vue-router'
 import AppScreen from '@/components/common/AppScreen.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
@@ -15,7 +15,7 @@ const requestText = ref(consultationFlow.utterance)
 const canSubmit = computed(() => requestText.value.trim().length > 0)
 
 const popularTasks = [
-  { label: '통장 재발급', icon: CreditCard },
+  { label: '통장 재발급', icon: BookOpen },
   { label: '카드 재발급', icon: CreditCard },
   { label: '예금 / 적금 해지', icon: PiggyBank },
   { label: '계좌 개설', icon: UserRoundPlus },
@@ -23,6 +23,7 @@ const popularTasks = [
 
 function chooseTask(taskName: string) {
   requestText.value = taskName
+  submitInput()
 }
 
 function submitInput() {

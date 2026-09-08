@@ -62,7 +62,9 @@ async function handleConfirm() {
         class="task-confirm__primary"
         :class="{ 'task-confirm__primary--selected': selectedCode === primaryCandidate.taskTypeCode }"
         type="button"
-        @click="selectedCode = primaryCandidate.taskTypeCode"
+        @click="
+          selectedCode = selectedCode === primaryCandidate.taskTypeCode ? null : primaryCandidate.taskTypeCode
+        "
       >
         <span class="task-confirm__primary-text">
           <strong>{{ primaryCandidate.name }}</strong>
@@ -84,7 +86,7 @@ async function handleConfirm() {
             :title="candidate.name"
             :description="candidate.easyDescription"
             :selected="selectedCode === candidate.taskTypeCode"
-            @click="selectedCode = candidate.taskTypeCode"
+            @click="selectedCode = selectedCode === candidate.taskTypeCode ? null : candidate.taskTypeCode"
           />
         </div>
       </template>

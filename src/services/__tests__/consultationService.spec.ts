@@ -148,6 +148,76 @@ describe('consultationService (integration: client interceptors + service)', () 
     expect(result.weights).toEqual({ wait: 0.6, distance: 0.4 })
   })
 
+  it('getBranchRecommendationsWithFallback returns the GPS result directly when it has recommendations', async () => {
+    mock.onGet('/branches/recommendations').reply((config) => {
+      expect(config.params).toEqual({ consultationId: 'c1', taskTypeCode: 'PASSBOOK_REISSUE', lat: 33.4, lng: 126.5 })
+      return [
+        200,
+        {
+          success: true,
+          data: {
+            recommendations: [{ rank: 1, branch: { branchId: 1, name: '제주지점', address: '', phone: '', distanceKm: 1 } }],
+            weights: { wait: 0.6, distance: 0.4 },
+          },
+          error: null,
+        },
+      ]
+    })
+
+    const result = await consultationService.getBranchRecommendationsWithFallback(
+      { consultationId: 'c1', taskTypeCode: 'PASSBOOK_REISSUE', lat: 33.4, lng: 126.5 },
+      { lat: 37.5665, lng: 126.978 },
+    )
+
+    expect(result.recommendations).toHaveLength(1)
+    expect(mock.history.get).toHaveLength(1)
+  })
+
+  it('getBranchRecommendationsWithFallback retries with the fallback location when the GPS result is empty', async () => {
+    mock.onGet('/branches/recommendations').reply((config) => {
+      if (config.params.lat === 33.4) {
+        return [200, { success: true, data: { recommendations: [], weights: { wait: 0.6, distance: 0.4 } }, error: null }]
+      }
+      expect(config.params).toEqual({ consultationId: 'c1', taskTypeCode: 'PASSBOOK_REISSUE', lat: 37.5665, lng: 126.978 })
+      return [
+        200,
+        {
+          success: true,
+          data: {
+            recommendations: [{ rank: 1, branch: { branchId: 87, name: '광화문지점', address: '', phone: '', distanceKm: 1 } }],
+            weights: { wait: 0.6, distance: 0.4 },
+          },
+          error: null,
+        },
+      ]
+    })
+
+    const result = await consultationService.getBranchRecommendationsWithFallback(
+      { consultationId: 'c1', taskTypeCode: 'PASSBOOK_REISSUE', lat: 33.4, lng: 126.5 },
+      { lat: 37.5665, lng: 126.978 },
+    )
+
+    expect(result.recommendations).toHaveLength(1)
+    expect(result.recommendations[0].branch.name).toBe('광화문지점')
+    expect(mock.history.get).toHaveLength(2)
+  })
+
+  it('getBranchRecommendationsWithFallback does not retry when the GPS query already used the fallback location', async () => {
+    mock.onGet('/branches/recommendations').reply(200, {
+      success: true,
+      data: { recommendations: [], weights: { wait: 0.6, distance: 0.4 } },
+      error: null,
+    })
+
+    const result = await consultationService.getBranchRecommendationsWithFallback(
+      { consultationId: 'c1', taskTypeCode: 'PASSBOOK_REISSUE', lat: 37.5665, lng: 126.978 },
+      { lat: 37.5665, lng: 126.978 },
+    )
+
+    expect(result.recommendations).toHaveLength(0)
+    expect(mock.history.get).toHaveLength(1)
+  })
+
   it('getTaskTypes maps the backend "code" field to taskTypeCode', async () => {
     mock.onGet('/task-types').reply(200, {
       success: true,

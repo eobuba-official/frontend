@@ -14,8 +14,10 @@ const emit = defineEmits<{
   'permission-denied': []
 }>()
 
+const BAR_COUNT = 25
+
 const previousState = ref<VoiceOrbState>(props.state)
-const barHeights = ref([8, 8, 8, 8, 8])
+const barHeights = ref(Array<number>(BAR_COUNT).fill(6))
 
 let ownedMediaStream: MediaStream | null = null
 let audioContext: AudioContext | null = null
@@ -49,11 +51,12 @@ function stopListeningAudio() {
     void audioContext.close()
     audioContext = null
   }
-  barHeights.value = [8, 8, 8, 8, 8]
+  barHeights.value = Array<number>(BAR_COUNT).fill(6)
 }
 
 function runVisualizer() {
-  const bandSize = freqData ? Math.max(1, Math.floor(freqData.length / 5)) : 1
+  const bandSize = freqData ? Math.max(1, Math.floor(freqData.length / BAR_COUNT)) : 1
+  const center = (BAR_COUNT - 1) / 2
 
   const tick = () => {
     if (!analyser || !freqData) return
@@ -66,7 +69,8 @@ function runVisualizer() {
       let sum = 0
       for (const value of slice) sum += value
       const average = slice.length > 0 ? sum / slice.length : 0
-      const target = 8 + (average / 255) * (34 - 8)
+      const envelope = 0.15 + 0.85 * Math.cos(((index - center) / center) * (Math.PI / 2))
+      const target = 6 + (average / 255) * (46 - 6) * envelope
       return prevHeight + (target - prevHeight) * 0.3
     })
 
@@ -320,7 +324,8 @@ onBeforeUnmount(stopListeningAudio)
 }
 
 .voice-orb__core--listening {
-  background: #f2a73b;
+  width: auto;
+  height: auto;
 }
 
 .voice-orb__mic {
@@ -329,15 +334,16 @@ onBeforeUnmount(stopListeningAudio)
 
 .voice-orb__bars {
   display: flex;
-  align-items: flex-end;
-  gap: 5px;
-  height: 34px;
+  align-items: center;
+  gap: 3px;
+  height: 46px;
 }
 
 .voice-orb__bar {
-  width: 5px;
-  border-radius: 3px;
-  background: #ffffff;
+  width: 3px;
+  border-radius: 2px;
+  background: #c96518;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.5);
 }
 
 .voice-orb__dots {
