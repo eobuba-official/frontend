@@ -7,7 +7,7 @@ import BaseButton from '@/components/common/BaseButton.vue'
 import FlowHeader from '@/components/common/FlowHeader.vue'
 import { routePaths } from '@/router/routePaths'
 import { useConsultationFlowStore } from '@/stores/consultationFlow'
-import { geocodeAddress, loadKakaoMaps } from '@/utils/kakaoMaps'
+import { loadKakaoMaps } from '@/utils/kakaoMaps'
 import type { KakaoMap, KakaoMarker } from '@/utils/kakaoMaps'
 import { isLocationPermissionEnabled } from '@/utils/permissionPreferences'
 
@@ -77,33 +77,21 @@ async function initMap() {
     await loadKakaoMaps()
     const maps = window.kakao!.maps
 
-    const geocoded = await Promise.all(
-      uniqueBranches.value.map(async (item) => ({
-        item,
-        coords: await geocodeAddress(item.branch.address),
-      })),
-    )
-    const withCoords = geocoded.filter(
-      (entry): entry is { item: (typeof geocoded)[number]['item']; coords: { lat: number; lng: number } } =>
-        entry.coords !== null,
-    )
-
-    const first = withCoords[0]
+    const first = uniqueBranches.value[0]
     if (!first || !mapContainer.value) {
       mapError.value = '지점 위치를 지도에 표시하지 못했어요.'
       return
     }
 
-    const center = first.coords
     const mapInstance = new maps.Map(mapContainer.value, {
-      center: new maps.LatLng(center.lat, center.lng),
+      center: new maps.LatLng(first.branch.lat, first.branch.lng),
       level: 5,
     })
     map = mapInstance
 
-    withCoords.forEach(({ item, coords }) => {
+    uniqueBranches.value.forEach((item) => {
       const marker = new maps.Marker({
-        position: new maps.LatLng(coords.lat, coords.lng),
+        position: new maps.LatLng(item.branch.lat, item.branch.lng),
         image: pinImage(item.rank === selectedRank.value),
       })
       marker.setMap(mapInstance)
