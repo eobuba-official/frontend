@@ -92,13 +92,6 @@ async function handleSubmit() {
   background: var(--color-accent);
 }
 
-.login__title {
-  font-family: var(--font-body);
-  font-size: var(--text-2xl);
-  font-weight: 800;
-  line-height: 1.35;
-}
-
 .login__lede {
   color: var(--color-ink-soft);
   font-size: var(--text-sm);

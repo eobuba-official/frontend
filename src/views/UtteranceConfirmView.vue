@@ -111,14 +111,6 @@ async function handleConfirm() {
   gap: var(--space-2);
 }
 
-.confirm h1 {
-  color: var(--color-ink);
-  font-family: var(--font-body);
-  font-size: var(--text-2xl);
-  font-weight: 900;
-  line-height: 1.3;
-}
-
 .confirm__heading p {
   color: var(--color-ink-soft);
   font-size: var(--text-lg);

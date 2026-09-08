@@ -4,6 +4,7 @@ import { Clock, MapPin } from '@lucide/vue'
 import { useRouter } from 'vue-router'
 import AppScreen from '@/components/common/AppScreen.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
+import BottomActionBar from '@/components/common/BottomActionBar.vue'
 import FlowHeader from '@/components/common/FlowHeader.vue'
 import { routePaths } from '@/router/routePaths'
 import { consultationService } from '@/services/consultationService'
@@ -118,10 +119,10 @@ function viewOnMap() {
     </section>
 
     <template #footer>
-      <div class="branches__footer">
+      <BottomActionBar stacked>
         <BaseButton variant="ghost" block @click="viewOnMap">지도에서 보기</BaseButton>
         <BaseButton block :disabled="!selected" @click="handleConfirm">이 시간으로 정하기</BaseButton>
-      </div>
+      </BottomActionBar>
     </template>
   </AppScreen>
 </template>
@@ -131,13 +132,6 @@ function viewOnMap() {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-}
-
-.branches h1 {
-  font-family: var(--font-body);
-  font-size: var(--text-2xl);
-  font-weight: 800;
-  line-height: 1.3;
 }
 
 .branches > p {
@@ -227,9 +221,4 @@ function viewOnMap() {
   font-weight: 800;
 }
 
-.branches__footer {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-}
 </style>

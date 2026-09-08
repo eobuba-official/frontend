@@ -372,7 +372,7 @@ onBeforeUnmount(closeAudioGraph)
   gap: var(--space-2);
   min-height: 174px;
   padding: var(--space-6) var(--space-3);
-  border: 1px solid #f2f2f2;
+  border: 1px solid var(--color-line);
   border-radius: var(--radius-lg);
   background: var(--color-surface-raised);
   box-shadow: 0 8px 20px rgba(31, 35, 41, 0.04);

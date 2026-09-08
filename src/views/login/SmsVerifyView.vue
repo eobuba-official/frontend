@@ -133,13 +133,6 @@ async function handleVerify() {
   padding-block: var(--space-6);
 }
 
-.verify h1 {
-  font-family: var(--font-body);
-  font-size: var(--text-2xl);
-  font-weight: 800;
-  line-height: 1.35;
-}
-
 .verify__lede {
   color: var(--color-ink-soft);
   font-size: var(--text-sm);

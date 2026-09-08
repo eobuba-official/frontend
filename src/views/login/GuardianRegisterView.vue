@@ -146,13 +146,6 @@ async function handleRegister() {
   text-align: center;
 }
 
-.guardian h1 {
-  font-family: var(--font-body);
-  font-size: var(--text-2xl);
-  font-weight: 800;
-  line-height: 1.35;
-}
-
 .guardian__lede {
   color: var(--color-ink-soft);
   font-size: var(--text-sm);

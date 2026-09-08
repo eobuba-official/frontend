@@ -3,6 +3,7 @@ import { CircleHelp } from '@lucide/vue'
 import { useRouter } from 'vue-router'
 import AppScreen from '@/components/common/AppScreen.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
+import BottomActionBar from '@/components/common/BottomActionBar.vue'
 import { routePaths } from '@/router/routePaths'
 
 const router = useRouter()
@@ -23,10 +24,10 @@ function callCustomerCenter() {
     </section>
 
     <template #footer>
-      <div class="end__footer">
+      <BottomActionBar stacked>
         <BaseButton variant="ghost" block @click="router.push(routePaths.home)">다시 말해볼게요</BaseButton>
         <BaseButton block @click="callCustomerCenter">KB국민은행 1588-9999</BaseButton>
-      </div>
+      </BottomActionBar>
     </template>
   </AppScreen>
 </template>
@@ -52,20 +53,7 @@ function callCustomerCenter() {
   color: var(--color-accent-deep);
 }
 
-.end h1 {
-  font-family: var(--font-body);
-  font-size: var(--text-2xl);
-  font-weight: 800;
-  line-height: 1.35;
-}
-
 .end p {
   color: var(--color-ink-soft);
-}
-
-.end__footer {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
 }
 </style>

@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import AppScreen from '@/components/common/AppScreen.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
+import BottomActionBar from '@/components/common/BottomActionBar.vue'
 import FlowHeader from '@/components/common/FlowHeader.vue'
 import TaskOptionCard from '@/components/common/TaskOptionCard.vue'
 import { routePaths } from '@/router/routePaths'
@@ -92,14 +93,14 @@ async function handleConfirm() {
     </section>
 
     <template #footer>
-      <div class="task-confirm__footer">
+      <BottomActionBar stacked>
         <BaseButton variant="ghost" block @click="router.push(routePaths.consultationEnd)">
           모르겠어요, 상담받을게요
         </BaseButton>
         <BaseButton block :disabled="!canSubmit" @click="handleConfirm">
           {{ isSubmitting ? '선택하는 중...' : '이 업무가 맞아요' }}
         </BaseButton>
-      </div>
+      </BottomActionBar>
     </template>
   </AppScreen>
 </template>
@@ -109,13 +110,6 @@ async function handleConfirm() {
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
-}
-
-.task-confirm h1 {
-  font-family: var(--font-body);
-  font-size: var(--text-2xl);
-  font-weight: 800;
-  line-height: 1.3;
 }
 
 .task-confirm__primary {
@@ -184,11 +178,5 @@ async function handleConfirm() {
 .task-confirm__error {
   color: var(--color-alert);
   font-size: var(--text-sm);
-}
-
-.task-confirm__footer {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
 }
 </style>
