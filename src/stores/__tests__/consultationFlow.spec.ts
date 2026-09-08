@@ -214,6 +214,8 @@ describe('consultationFlow store', () => {
         name: 'KB국민은행 종로지점',
         address: '서울',
         phone: '02-000-0000',
+        lat: 37.5704,
+        lng: 126.9910,
         distanceKm: 1,
       },
       visitTime: {

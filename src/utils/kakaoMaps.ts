@@ -17,11 +17,6 @@ export interface KakaoMarker {
   getPosition(): KakaoLatLng
 }
 
-interface KakaoGeocoderResult {
-  x: string
-  y: string
-}
-
 export interface KakaoMapsNamespace {
   Map: new (container: HTMLElement, options: { center: KakaoLatLng; level: number }) => KakaoMap
   LatLng: new (lat: number, lng: number) => KakaoLatLng
@@ -33,15 +28,6 @@ export interface KakaoMapsNamespace {
     addListener(target: KakaoMarker, type: string, handler: () => void): void
   }
   load(callback: () => void): void
-  services: {
-    Geocoder: new () => {
-      addressSearch(
-        address: string,
-        callback: (result: KakaoGeocoderResult[], status: string) => void,
-      ): void
-    }
-    Status: { OK: string }
-  }
 }
 
 declare global {
@@ -64,30 +50,11 @@ export function loadKakaoMaps(): Promise<void> {
     }
 
     const script = document.createElement('script')
-    script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${appKey}&autoload=false&libraries=services`
+    script.src = `https://dapi.kakao.com/v2/maps/sdk.js?appkey=${appKey}&autoload=false`
     script.onload = () => window.kakao?.maps.load(() => resolve())
     script.onerror = () => reject(new Error('카카오맵을 불러오지 못했어요.'))
     document.head.appendChild(script)
   })
 
   return loadPromise
-}
-
-export function geocodeAddress(address: string): Promise<{ lat: number; lng: number } | null> {
-  return new Promise((resolve) => {
-    const maps = window.kakao?.maps
-    if (!maps) {
-      resolve(null)
-      return
-    }
-
-    const geocoder = new maps.services.Geocoder()
-    geocoder.addressSearch(address, (result, status) => {
-      if (status === maps.services.Status.OK && result[0]) {
-        resolve({ lat: Number(result[0].y), lng: Number(result[0].x) })
-      } else {
-        resolve(null)
-      }
-    })
-  })
 }
