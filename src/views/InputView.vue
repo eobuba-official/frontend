@@ -43,7 +43,6 @@ function submitInput() {
 
     <section class="manual-input">
       <h1>필요하신 내용을 입력해주세요</h1>
-      <p>은행 업무나 궁금하신 내용을 편하게 적어주세요.</p>
 
       <label class="manual-input__field">
         <textarea
@@ -92,13 +91,6 @@ function submitInput() {
   font-size: var(--text-2xl);
   font-weight: 900;
   line-height: 1.3;
-}
-
-.manual-input > p {
-  color: var(--color-ink-soft);
-  font-size: var(--text-xl);
-  font-weight: 600;
-  line-height: 1.45;
 }
 
 .manual-input__field {

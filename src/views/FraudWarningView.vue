@@ -1,15 +1,23 @@
 <script setup lang="ts">
-import { computed } from 'vue'
-import { Landmark, PhoneOff, ShieldAlert, Users } from '@lucide/vue'
+import { computed, onMounted, ref } from 'vue'
+import { Landmark, Phone, PhoneOff, ShieldAlert, Users } from '@lucide/vue'
 import { useRouter } from 'vue-router'
 import AppScreen from '@/components/common/AppScreen.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import WarningBox from '@/components/common/WarningBox.vue'
 import { routePaths } from '@/router/routePaths'
+import { authService } from '@/services/authService'
+import { consultationService } from '@/services/consultationService'
 import { useConsultationFlowStore } from '@/stores/consultationFlow'
+import type { ConsultationHistoryItem, Guardian } from '@/api/types'
 
 const router = useRouter()
 const consultationFlow = useConsultationFlowStore()
+
+const guardians = ref<Guardian[]>([])
+const isLoadingGuardians = ref(true)
+const guardiansError = ref('')
+const recentFraudHistory = ref<ConsultationHistoryItem[]>([])
 
 const summaryLine = computed(
   () => consultationFlow.guidance ?? consultationFlow.fraudCheck?.patterns[0]?.explanation ?? null,
@@ -25,6 +33,42 @@ function iconForSafetyAction(action: string) {
 function callFss() {
   window.location.href = 'tel:1332'
 }
+
+function callGuardian(phoneNumber: string) {
+  window.location.href = `tel:${phoneNumber}`
+}
+
+function formatPhone(phoneNumber: string) {
+  return phoneNumber.length === 11
+    ? `${phoneNumber.slice(0, 3)}-${phoneNumber.slice(3, 7)}-${phoneNumber.slice(7)}`
+    : phoneNumber
+}
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat('ko-KR', { month: 'long', day: 'numeric' }).format(new Date(value))
+}
+
+onMounted(async () => {
+  if (consultationFlow.fraudCheck) return
+
+  try {
+    const me = await authService.getMe()
+    guardians.value = me.guardians
+  } catch (error) {
+    guardiansError.value = error instanceof Error ? error.message : '가족 정보를 불러오지 못했어요.'
+  } finally {
+    isLoadingGuardians.value = false
+  }
+
+  try {
+    const history = await consultationService.getConsultationHistory()
+    recentFraudHistory.value = history.consultations
+      .filter((item) => item.status === 'FRAUD_WARNING' || item.status === 'WARNING_DISMISSED')
+      .slice(0, 3)
+  } catch {
+    recentFraudHistory.value = []
+  }
+})
 </script>
 
 <template>
@@ -94,10 +138,50 @@ function callFss() {
           <strong>보이스피싱 예방</strong>
         </div>
       </div>
+
       <WarningBox
         title="수상한 전화는 바로 확인하세요"
         description="은행은 안전계좌로 돈을 옮기라고 요구하지 않습니다."
       />
+
+      <div class="fraud__card">
+        <h2>수상하면 가족에게 바로 알리세요</h2>
+        <p v-if="isLoadingGuardians" class="fraud__status">불러오는 중...</p>
+        <p v-else-if="guardiansError" class="fraud__status fraud__status--error">{{ guardiansError }}</p>
+        <ul v-else-if="guardians.length > 0" class="fraud__steps">
+          <li v-for="guardian in guardians" :key="guardian.guardianId" class="fraud__guardian-row">
+            <span class="fraud__step-icon" aria-hidden="true">
+              <Users :size="20" :stroke-width="2.2" />
+            </span>
+            <span class="fraud__guardian-info">
+              <strong>{{ guardian.name }} ({{ guardian.relation }})</strong>
+              <small>{{ formatPhone(guardian.phoneNumber) }}</small>
+            </span>
+            <button
+              class="fraud__call-button"
+              type="button"
+              :aria-label="`${guardian.name}에게 전화하기`"
+              @click="callGuardian(guardian.phoneNumber)"
+            >
+              <Phone :size="18" :stroke-width="2.2" />
+            </button>
+          </li>
+        </ul>
+        <div v-else class="fraud__empty">
+          <p>등록된 가족이 없어요. 가족을 등록해두면 더 안전해요.</p>
+          <BaseButton variant="ghost" block @click="router.push(routePaths.settings)">가족 등록하러 가기</BaseButton>
+        </div>
+      </div>
+
+      <div v-if="recentFraudHistory.length > 0" class="fraud__card">
+        <h2>예전에 이런 전화 조심하라고 알려드렸어요</h2>
+        <ul class="fraud__history">
+          <li v-for="item in recentFraudHistory" :key="item.consultationId" class="fraud__history-item">
+            <small>{{ formatDate(item.createdAt) }}</small>
+            <strong>{{ item.correctedUtterance }}</strong>
+          </li>
+        </ul>
+      </div>
     </section>
 
     <template #footer>
@@ -253,6 +337,97 @@ function callFss() {
   font-size: var(--text-sm);
   font-weight: 700;
   text-align: center;
+}
+
+.fraud__status {
+  color: var(--color-ink-soft);
+  font-size: var(--text-sm);
+}
+
+.fraud__status--error {
+  color: var(--color-alert);
+}
+
+.fraud__guardian-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+}
+
+.fraud__guardian-info {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.fraud__guardian-info strong {
+  font-weight: 800;
+}
+
+.fraud__guardian-info small {
+  color: var(--color-ink-soft);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.fraud__call-button {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--color-yellow-light);
+  color: var(--color-accent-deep);
+  cursor: pointer;
+}
+
+.fraud__empty {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.fraud__empty p {
+  color: var(--color-ink-soft);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+.fraud__history {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fraud__history-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-line);
+}
+
+.fraud__history-item:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.fraud__history-item small {
+  color: var(--color-ink-soft);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+
+.fraud__history-item strong {
+  font-weight: 700;
 }
 
 </style>

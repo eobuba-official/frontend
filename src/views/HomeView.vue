@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref } from 'vue'
-import { Keyboard, Mic, Settings, ShieldAlert } from '@lucide/vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { Keyboard, Settings, ShieldAlert } from '@lucide/vue'
 import { useRouter } from 'vue-router'
 import AppScreen from '@/components/common/AppScreen.vue'
 import logoMark from '@/assets/img/logo-mark.png'
@@ -9,15 +9,15 @@ import { speechService } from '@/services/speechService'
 import { useConsultationFlowStore } from '@/stores/consultationFlow'
 import { isVoicePermissionEnabled } from '@/utils/permissionPreferences'
 import { encodeWav, mergeAudioChunks } from '@/utils/wavEncoder'
+import VoiceOrb from './VoiceOrb.vue'
 
 const router = useRouter()
 const consultationFlow = useConsultationFlowStore()
 const isListening = ref(false)
 const isProcessing = ref(false)
 const micError = ref('')
-const barLevels = ref([0.38, 0.64, 0.88, 0.52, 0.7, 0.44])
+const voiceMediaStream = ref<MediaStream | null>(null)
 
-let animationFrame = 0
 let mediaStream: MediaStream | null = null
 let audioContext: AudioContext | null = null
 let sourceNode: MediaStreamAudioSourceNode | null = null
@@ -25,17 +25,10 @@ let processorNode: ScriptProcessorNode | null = null
 let silentGainNode: GainNode | null = null
 let audioChunks: Float32Array[] = []
 
-const micButtonLabel = computed(() => {
-  if (isProcessing.value) return '확인하고 있어요. 잠시만 기다려주세요'
-  return isListening.value ? '듣고 있어요. 그만하시려면 다시 눌러주세요' : '동그라미를 누르고 말로 은행 업무를 알려주세요'
-})
-const micCoreScale = computed(() => {
-  if (!isListening.value) {
-    return 1
-  }
-
-  const averageLevel = barLevels.value.reduce((sum, level) => sum + level, 0) / barLevels.value.length
-  return 1 + Math.min(0.1, averageLevel * 0.1)
+const voiceOrbState = computed<'idle' | 'listening' | 'thinking'>(() => {
+  if (isProcessing.value) return 'thinking'
+  if (isListening.value) return 'listening'
+  return 'idle'
 })
 
 async function handleVoiceStart() {
@@ -63,6 +56,7 @@ async function startRecording() {
     return
   }
 
+  voiceMediaStream.value = mediaStream
   audioContext = new AudioContext()
   sourceNode = audioContext.createMediaStreamSource(mediaStream)
   processorNode = audioContext.createScriptProcessor(4096, 1, 1)
@@ -79,7 +73,10 @@ async function startRecording() {
   silentGainNode.connect(audioContext.destination)
 
   isListening.value = true
-  startFallbackMotion()
+}
+
+function handleOrbPermissionDenied() {
+  micError.value = '마이크 권한이 꺼져 있어요. 브라우저 주소창의 마이크 아이콘에서 허용해 주세요.'
 }
 
 async function stopRecordingAndTranscribe() {
@@ -104,8 +101,8 @@ async function stopRecordingAndTranscribe() {
       sttConfidence: result.sttConfidence,
     })
     await router.push(routePaths.utteranceConfirm)
-  } catch (error) {
-    micError.value = error instanceof Error ? error.message : '잘 듣지 못했어요. 다시 눌러서 말씀해 주세요.'
+  } catch {
+    micError.value = '잘 듣지 못했어요. 다시 눌러서 말씀해 주세요.'
   } finally {
     isProcessing.value = false
   }
@@ -125,7 +122,6 @@ function mapGetUserMediaError(error: unknown): string {
 }
 
 function closeAudioGraph() {
-  window.cancelAnimationFrame(animationFrame)
   processorNode?.disconnect()
   sourceNode?.disconnect()
   silentGainNode?.disconnect()
@@ -136,8 +132,8 @@ function closeAudioGraph() {
   sourceNode = null
   silentGainNode = null
   mediaStream = null
+  voiceMediaStream.value = null
   audioContext = null
-  barLevels.value = [0.38, 0.64, 0.88, 0.52, 0.7, 0.44]
 }
 
 function goTextInput() {
@@ -152,15 +148,9 @@ function goSettings() {
   void router.push(routePaths.settings)
 }
 
-function startFallbackMotion() {
-  const tick = () => {
-    const now = Date.now() / 260
-    barLevels.value = barLevels.value.map((_, index) => 0.34 + Math.abs(Math.sin(now + index * 0.65)) * 0.62)
-    animationFrame = window.requestAnimationFrame(tick)
-  }
-
-  tick()
-}
+onMounted(() => {
+  consultationFlow.reset()
+})
 
 onBeforeUnmount(closeAudioGraph)
 </script>
@@ -179,7 +169,7 @@ onBeforeUnmount(closeAudioGraph)
           ></span>
           <div class="home__brand-copy">
             <h1 class="home__brand-name">어부바</h1>
-            <p class="home__brand-tagline">말로 은행 업무를 도와드려요</p>
+            <p class="home__brand-tagline">은행 업무를 도와드려요</p>
           </div>
         </div>
 
@@ -191,7 +181,13 @@ onBeforeUnmount(closeAudioGraph)
       <section class="home__hero" aria-labelledby="home-title">
         <div class="home__copy">
           <h2 id="home-title">
-            {{ isProcessing ? '확인하고 있어요...' : isListening ? '듣고 있어요...' : '무엇을 도와드릴까요?' }}
+            {{
+              isProcessing
+                ? '확인하고 있어요...'
+                : isListening
+                  ? '듣고 있어요...'
+                  : '무엇을 도와드릴까요?'
+            }}
           </h2>
           <p>
             {{
@@ -205,22 +201,12 @@ onBeforeUnmount(closeAudioGraph)
           <small v-if="micError">{{ micError }}</small>
         </div>
 
-        <button
-          class="voice-orb"
-          :class="{ 'voice-orb--listening': isListening }"
-          type="button"
-          :aria-label="micButtonLabel"
-          :disabled="isProcessing"
-          @click="handleVoiceStart"
-        >
-          <span
-            class="voice-orb__center"
-            :style="{ transform: `scale(${micCoreScale})` }"
-            aria-hidden="true"
-          >
-            <Mic :size="52" :stroke-width="1.9" />
-          </span>
-        </button>
+        <VoiceOrb
+          :state="voiceOrbState"
+          :media-stream="voiceMediaStream"
+          @toggle="handleVoiceStart"
+          @permission-denied="handleOrbPermissionDenied"
+        />
       </section>
 
       <section class="quick-actions" aria-label="빠른 실행">
@@ -250,7 +236,6 @@ onBeforeUnmount(closeAudioGraph)
   display: flex;
   flex: 1;
   flex-direction: column;
-  min-height: 100vh;
   background: var(--color-bg);
   padding: var(--space-5) 0 var(--space-7);
 }
@@ -259,7 +244,7 @@ onBeforeUnmount(closeAudioGraph)
   position: fixed;
   inset: 0;
   z-index: 1;
-  background: rgba(31, 35, 41, 0.32);
+  background: rgba(31, 35, 41, 0.14);
   pointer-events: none;
 }
 
@@ -295,7 +280,7 @@ onBeforeUnmount(closeAudioGraph)
 .home__brand-name {
   color: var(--color-ink);
   font-family: var(--font-body);
-  font-size: 1.5rem;
+  font-size: var(--text-2xl);
   font-weight: 800;
   line-height: 1.2;
 }
@@ -335,69 +320,6 @@ onBeforeUnmount(closeAudioGraph)
   text-align: center;
 }
 
-.voice-orb {
-  position: relative;
-  z-index: 2;
-  display: grid;
-  place-items: center;
-  width: min(53vw, 231px);
-  aspect-ratio: 1;
-  border: 0;
-  border-radius: var(--radius-pill);
-  background:
-    radial-gradient(circle at 27% 24%, rgba(255, 255, 255, 0.95) 0 12%, rgba(255, 255, 255, 0.28) 22%, transparent 34%),
-    radial-gradient(circle at 70% 72%, rgba(255, 244, 196, 0.7) 0 7%, transparent 18%),
-    radial-gradient(circle at 50% 50%, #ffffff 0 28%, transparent 29%),
-    conic-gradient(from 218deg at 52% 50%, #efcc58, #f7e692, #fff4c4, #f1d45d, #dfb12d, #efcf61, #fae9a4, #f7e692, #efcc58),
-    radial-gradient(circle at 50% 54%, #fae9a4 0, #efcc58 72%, #f7e692 100%);
-  box-shadow:
-    0 16px 38px rgba(216, 170, 32, 0.14),
-    inset 0 10px 34px rgba(255, 255, 255, 0.38);
-  cursor: pointer;
-  isolation: isolate;
-}
-
-.voice-orb:disabled {
-  cursor: not-allowed;
-  opacity: 0.7;
-}
-
-.voice-orb::before,
-.voice-orb::after {
-  position: absolute;
-  inset: 10%;
-  z-index: -1;
-  border-radius: inherit;
-  background: rgba(255, 188, 0, 0.12);
-  content: '';
-  opacity: 0;
-}
-
-.voice-orb--listening::before {
-  animation: pulse-ring 1.4s ease-out infinite;
-}
-
-.voice-orb--listening::after {
-  animation: pulse-ring 1.4s 0.35s ease-out infinite;
-}
-
-.voice-orb__center {
-  display: grid;
-  place-items: center;
-  width: 68px;
-  aspect-ratio: 1;
-  border-radius: var(--radius-pill);
-  background: #ffffff;
-  box-shadow: 0 12px 28px rgba(31, 35, 41, 0.06);
-  transition: transform 80ms linear;
-}
-
-.voice-orb__center :deep(svg) {
-  width: 42px;
-  height: 42px;
-  color: var(--color-accent-deep);
-}
-
 .home__copy {
   position: relative;
   z-index: 2;
@@ -412,7 +334,7 @@ onBeforeUnmount(closeAudioGraph)
 
 .home__copy h2 {
   font-family: var(--font-body);
-  font-size: 2.35rem;
+  font-size: var(--text-hero);
   font-weight: 800;
   line-height: 1.18;
 }
@@ -498,23 +420,7 @@ onBeforeUnmount(closeAudioGraph)
   text-align: center;
 }
 
-@keyframes pulse-ring {
-  0% {
-    opacity: 0.5;
-    transform: scale(0.85);
-  }
-
-  100% {
-    opacity: 0;
-    transform: scale(1.22);
-  }
-}
-
 @media (max-width: 420px) {
-  .home__brand-name {
-    font-size: 1.3rem;
-  }
-
   .home__brand-tagline {
     font-size: var(--text-sm);
   }
