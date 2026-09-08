@@ -79,12 +79,6 @@ function handleFinish() {
   gap: var(--space-6);
 }
 
-.summary h1 {
-  font-family: var(--font-body);
-  font-size: var(--text-2xl);
-  font-weight: 800;
-}
-
 .summary-list {
   display: flex;
   flex-direction: column;

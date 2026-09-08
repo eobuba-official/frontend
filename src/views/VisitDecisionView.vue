@@ -104,13 +104,6 @@ const heading = computed(() => {
   gap: var(--space-4);
 }
 
-.visit-decision h1 {
-  font-family: var(--font-body);
-  font-size: var(--text-2xl);
-  font-weight: 800;
-  line-height: 1.35;
-}
-
 .visit-decision__copy p {
   color: var(--color-ink-soft);
 }

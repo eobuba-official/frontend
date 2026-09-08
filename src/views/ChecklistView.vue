@@ -203,12 +203,6 @@ function toggleItem(itemCode: string) {
   gap: var(--space-4);
 }
 
-.checklist-questions h1 {
-  font-family: var(--font-body);
-  font-size: var(--text-2xl);
-  font-weight: 800;
-}
-
 .checklist-questions > p {
   color: var(--color-ink-soft);
 }
@@ -264,12 +258,6 @@ function toggleItem(itemCode: string) {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-}
-
-.checklist h1 {
-  font-family: var(--font-body);
-  font-size: var(--text-2xl);
-  font-weight: 800;
 }
 
 .checklist > p {

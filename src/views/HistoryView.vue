@@ -98,12 +98,6 @@ onMounted(async () => {
   gap: var(--space-4);
 }
 
-.history h1 {
-  font-family: var(--font-body);
-  font-size: var(--text-2xl);
-  font-weight: 800;
-}
-
 .history__status {
   color: var(--color-ink-soft);
   font-size: var(--text-base);

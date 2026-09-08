@@ -85,14 +85,6 @@ function submitInput() {
   gap: var(--space-5);
 }
 
-.manual-input h1 {
-  color: var(--color-ink);
-  font-family: var(--font-body);
-  font-size: var(--text-2xl);
-  font-weight: 900;
-  line-height: 1.3;
-}
-
 .manual-input__field {
   position: relative;
   display: block;
