@@ -72,7 +72,7 @@ const heading = computed(() => {
       <BaseButton v-if="decision === 'VISIT_REQUIRED'" block @click="router.push(routePaths.checklist)">
         준비물 보기
       </BaseButton>
-      <BaseButton v-else block @click="router.push(routePaths.consultationEnd)">확인했어요</BaseButton>
+      <BaseButton v-else block @click="router.push(routePaths.home)">확인했어요</BaseButton>
     </template>
   </AppScreen>
 </template>
