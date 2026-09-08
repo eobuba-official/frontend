@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { Plus, Trash2, Users } from '@lucide/vue'
+import { Plus, Trash2, User } from '@lucide/vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import ConfirmModal from '@/components/common/ConfirmModal.vue'
 import PhoneNumberField from '@/components/common/PhoneNumberField.vue'
@@ -117,7 +117,7 @@ async function confirmDeleteGuardian() {
         <template v-for="(guardian, index) in guardians" :key="guardian.guardianId ?? guardian.phoneNumber">
           <div class="settings-row settings-row--static">
             <span class="settings-row__icon" aria-hidden="true">
-              <Users :size="20" :stroke-width="2.2" />
+              <User :size="20" :stroke-width="2.2" />
             </span>
             <span class="settings-row__copy">
               <strong>
