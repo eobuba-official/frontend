@@ -140,6 +140,12 @@ onBeforeUnmount(stopListeningAudio)
     @keydown.enter.prevent="handleToggle"
     @keydown.space.prevent="handleToggle"
   >
+    <span class="voice-orb__ripples" aria-hidden="true">
+      <i class="voice-orb__ripple voice-orb__ripple--1"></i>
+      <i class="voice-orb__ripple voice-orb__ripple--2"></i>
+      <i class="voice-orb__ripple voice-orb__ripple--3"></i>
+    </span>
+
     <div class="voice-orb__surface">
       <span class="voice-orb__blob voice-orb__blob--1"><i></i></span>
       <span class="voice-orb__blob voice-orb__blob--2"><i></i></span>
@@ -151,7 +157,11 @@ onBeforeUnmount(stopListeningAudio)
         <div v-if="state === 'idle'" key="idle" class="voice-orb__core voice-orb__core--idle">
           <Mic class="voice-orb__mic" :size="32" :stroke-width="2" />
         </div>
-        <div v-else-if="state === 'listening'" key="listening" class="voice-orb__core voice-orb__core--listening">
+        <div
+          v-else-if="state === 'listening'"
+          key="listening"
+          class="voice-orb__core voice-orb__core--listening"
+        >
           <span class="voice-orb__bars">
             <span
               v-for="(height, index) in barHeights"
@@ -176,11 +186,57 @@ onBeforeUnmount(stopListeningAudio)
 <style scoped>
 .voice-orb {
   position: relative;
+  z-index: 2;
   width: 240px;
   height: 240px;
   border-radius: 50%;
   cursor: pointer;
   animation: voice-orb-breathe-idle 4s ease-in-out infinite;
+}
+
+.voice-orb__ripples,
+.voice-orb__ripple {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.voice-orb__ripples {
+  z-index: -1;
+}
+
+.voice-orb__ripple {
+  opacity: 0;
+  background:
+    radial-gradient(
+      circle,
+      transparent 51%,
+      rgba(255, 251, 231, 0.96) 54%,
+      rgba(255, 210, 75, 0.78) 57%,
+      transparent 61%
+    ),
+    radial-gradient(
+      circle,
+      transparent 50%,
+      rgba(255, 188, 0, 0.32) 60%,
+      rgba(232, 134, 58, 0.13) 70%,
+      transparent 79%
+    );
+  filter: drop-shadow(0 10px 12px rgba(216, 170, 32, 0.16));
+  transform: scale(0.8);
+}
+
+.voice-orb--listening .voice-orb__ripple {
+  animation: voice-orb-ripple 2.7s cubic-bezier(0.2, 0.65, 0.3, 1) infinite;
+}
+
+.voice-orb--listening .voice-orb__ripple--2 {
+  animation-delay: 0.9s;
+}
+
+.voice-orb--listening .voice-orb__ripple--3 {
+  animation-delay: 1.8s;
 }
 
 .voice-orb::before {
@@ -217,6 +273,45 @@ onBeforeUnmount(stopListeningAudio)
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow:
+    inset 0 18px 28px rgba(255, 252, 235, 0.32),
+    inset 0 -26px 42px rgba(193, 104, 28, 0.13);
+}
+
+.voice-orb__surface::before,
+.voice-orb__surface::after {
+  position: absolute;
+  z-index: 1;
+  content: '';
+  pointer-events: none;
+}
+
+.voice-orb__surface::before {
+  inset: 3% 10% auto;
+  height: 38%;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse at 50% 0%,
+    rgba(255, 255, 255, 0.78),
+    rgba(255, 247, 205, 0.25) 45%,
+    transparent 72%
+  );
+  filter: blur(5px);
+}
+
+.voice-orb__surface::after {
+  right: 8%;
+  bottom: -8%;
+  left: 8%;
+  height: 42%;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse at 50% 100%,
+    rgba(216, 170, 32, 0.3),
+    rgba(242, 167, 59, 0.12) 48%,
+    transparent 76%
+  );
+  filter: blur(12px);
 }
 
 .voice-orb__blob {
@@ -320,7 +415,10 @@ onBeforeUnmount(stopListeningAudio)
 
 .voice-orb__core--idle,
 .voice-orb__core--thinking {
-  background: #ffffff;
+  background: radial-gradient(circle at 42% 32%, #ffffff 0%, #fffdf4 58%, #fff3bf 100%);
+  box-shadow:
+    0 10px 24px rgba(142, 81, 22, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.95);
 }
 
 .voice-orb__core--listening {
@@ -421,6 +519,21 @@ onBeforeUnmount(stopListeningAudio)
   }
 }
 
+@keyframes voice-orb-ripple {
+  0% {
+    opacity: 0;
+    transform: scale(0.78);
+  }
+  16% {
+    opacity: 0.9;
+  }
+  76%,
+  100% {
+    opacity: 0;
+    transform: scale(1.48);
+  }
+}
+
 @keyframes voice-orb-dot-bounce {
   0%,
   60%,
@@ -435,6 +548,7 @@ onBeforeUnmount(stopListeningAudio)
 @media (prefers-reduced-motion: reduce) {
   .voice-orb,
   .voice-orb--listening,
+  .voice-orb--listening .voice-orb__ripple,
   .voice-orb__blob,
   .voice-orb--idle::before {
     animation: none !important;

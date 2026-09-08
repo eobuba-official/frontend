@@ -171,40 +171,80 @@ onMounted(() => {
 }
 
 .gemini-result {
-  --gemini-glow-stops: #ff9a7b 0%, #ffd84d 30%, #67c7ff 62%, #ff9a7b 100%;
+  --gemini-spectrum:
+    #718be8 0%, #9d83d4 20%, #d982c5 38%, #e991a1 53%, #e8c46f 68%, #78bdc8 84%, #718be8 100%;
 
   position: relative;
   isolation: isolate;
   padding: 2px;
-  border-radius: 20px;
-  background: conic-gradient(from var(--gemini-border-angle, 0deg), var(--gemini-glow-stops));
-  box-shadow: 0 10px 30px -20px rgba(63, 129, 246, 0.68);
-  animation: gemini-border-spin 4.8s linear infinite;
+  border-radius: 21px;
+  background: conic-gradient(from var(--gemini-border-angle), var(--gemini-spectrum));
+  box-shadow:
+    0 0 0 1px rgba(118, 88, 255, 0.06),
+    0 0 8px rgba(128, 76, 255, 0.2),
+    0 0 18px rgba(60, 105, 255, 0.1);
+  animation: gemini-border-spin 6s linear infinite;
 }
 
 .gemini-result::before {
   position: absolute;
   z-index: -1;
-  inset: -8px;
+  inset: -5px;
   border-radius: 26px;
-  background: conic-gradient(from var(--gemini-border-angle, 0deg), var(--gemini-glow-stops));
+  background: conic-gradient(from var(--gemini-border-angle), var(--gemini-spectrum));
   content: '';
-  filter: blur(16px) saturate(145%);
-  opacity: 0.48;
+  filter: blur(14px) saturate(118%);
+  opacity: 0.26;
   pointer-events: none;
+}
+
+.gemini-result::after {
+  position: absolute;
+  z-index: -2;
+  inset: -12px -8px;
+  border-radius: 30px;
+  background: radial-gradient(
+    ellipse at 50% 58%,
+    rgba(111, 68, 255, 0.18),
+    rgba(57, 101, 255, 0.07) 48%,
+    transparent 76%
+  );
+  content: '';
+  filter: blur(16px);
+  opacity: 0.4;
+  pointer-events: none;
+  animation: gemini-halo-breathe 3.6s ease-in-out infinite;
 }
 
 .gemini-card {
   position: relative;
+  overflow: hidden;
   padding: var(--space-5);
-  border-radius: 18px;
+  border-radius: 19px;
   background:
-    radial-gradient(circle at 12% 8%, rgba(255, 248, 218, 0.92), transparent 44%),
+    radial-gradient(circle at 12% 8%, rgba(235, 243, 255, 0.58), transparent 42%),
     rgba(255, 255, 255, 0.98);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.96);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.98),
+    0 2px 5px rgba(38, 30, 82, 0.1);
+}
+
+.gemini-card::before {
+  position: absolute;
+  inset: -55% -35%;
+  background:
+    radial-gradient(ellipse at 28% 50%, rgba(66, 133, 244, 0.12), transparent 31%),
+    radial-gradient(ellipse at 58% 50%, rgba(155, 114, 203, 0.1), transparent 29%),
+    radial-gradient(ellipse at 78% 50%, rgba(244, 180, 62, 0.11), transparent 30%);
+  content: '';
+  pointer-events: none;
+  transform: translateX(-18%);
+  animation: gemini-energy-drift 7s cubic-bezier(0.45, 0, 0.25, 1) infinite;
 }
 
 .gemini-card__label {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   gap: var(--space-2);
@@ -222,9 +262,12 @@ onMounted(() => {
   border-radius: var(--radius-pill);
   background: linear-gradient(135deg, #fff0a8, #d9f2ff);
   color: #4969a8;
+  animation: gemini-sparkle-breathe 2.8s ease-in-out infinite;
 }
 
 .gemini-card strong {
+  position: relative;
+  z-index: 1;
   color: var(--color-ink);
   font-size: var(--text-2xl);
   font-weight: 900;
@@ -314,8 +357,51 @@ onMounted(() => {
   }
 }
 
+@keyframes gemini-energy-drift {
+  0%,
+  100% {
+    opacity: 0.68;
+    transform: translateX(-18%) scale(0.96);
+  }
+  50% {
+    opacity: 1;
+    transform: translateX(18%) scale(1.04);
+  }
+}
+
+@keyframes gemini-halo-breathe {
+  0%,
+  100% {
+    opacity: 0.3;
+    transform: scale(0.99);
+  }
+  50% {
+    opacity: 0.44;
+    transform: scale(1.01);
+  }
+}
+
+@keyframes gemini-sparkle-breathe {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(103, 199, 255, 0);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(103, 199, 255, 0.1);
+    transform: scale(1.06);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .gemini-result {
+    animation: none;
+  }
+
+  .gemini-result::before,
+  .gemini-result::after,
+  .gemini-card::before,
+  .gemini-card__icon {
     animation: none;
   }
 
