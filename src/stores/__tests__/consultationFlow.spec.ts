@@ -1,35 +1,73 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { createPinia, setActivePinia } from 'pinia'
 import { useConsultationFlowStore } from '../consultationFlow'
-import type { AnalyzeResult, BranchRecommendation, ResolvedChecklistResult, TaskSelectionResult } from '@/api/types'
+import type {
+  AnalyzeResult,
+  BranchRecommendation,
+  ResolvedChecklistResult,
+  TaskSelectionResult,
+} from '@/api/types'
 
 const analyzeResult: AnalyzeResult = {
   consultationId: 'c1',
   status: 'TASK_CONFIRMED',
-  fraudCheck: { detected: false, dismissible: false, patterns: [], safetyActions: [], guardianNotification: null },
+  fraudCheck: {
+    detected: false,
+    dismissible: false,
+    patterns: [],
+    safetyActions: [],
+    guardianNotification: null,
+  },
   classification: {
     status: 'CONFIRMED',
+    originalUtterance: '통장을 일어버렸어요',
     correctedUtterance: '통장을 잃어버렸어요',
+    correctionApplied: true,
     confidence: 0.9,
-    task: { taskTypeCode: 'PASSBOOK_REISSUE', name: '통장 재발급', easyDescription: '통장을 새로 만드는 일' },
+    task: {
+      taskTypeCode: 'PASSBOOK_REISSUE',
+      name: '통장 재발급',
+      easyDescription: '통장을 새로 만드는 일',
+    },
     candidates: [],
     sttRecheckNeeded: false,
   },
-  visitDecision: { decision: 'VISIT_REQUIRED', reason: '본인 확인 필요', remoteMethods: [], officialChannels: [] },
+  visitDecision: {
+    decision: 'VISIT_REQUIRED',
+    reason: '본인 확인 필요',
+    remoteMethods: [],
+    officialChannels: [],
+  },
 }
 
 const candidatesResult: AnalyzeResult = {
   consultationId: 'c2',
   status: 'CANDIDATES_SUGGESTED',
-  fraudCheck: { detected: false, dismissible: false, patterns: [], safetyActions: [], guardianNotification: null },
+  fraudCheck: {
+    detected: false,
+    dismissible: false,
+    patterns: [],
+    safetyActions: [],
+    guardianNotification: null,
+  },
   classification: {
     status: 'CANDIDATES',
+    originalUtterance: '아들 이름으로 뭘 좀 해야 하는데',
     correctedUtterance: '아들 이름으로 뭘 좀 해야 하는데',
+    correctionApplied: false,
     confidence: 0.5,
     task: null,
     candidates: [
-      { taskTypeCode: 'PROXY_TASK', name: '대리 업무', easyDescription: '가족 일을 대신 처리하는 것' },
-      { taskTypeCode: 'ACCOUNT_TRANSFER', name: '계좌이체', easyDescription: '다른 사람에게 돈을 보내는 일' },
+      {
+        taskTypeCode: 'PROXY_TASK',
+        name: '대리 업무',
+        easyDescription: '가족 일을 대신 처리하는 것',
+      },
+      {
+        taskTypeCode: 'ACCOUNT_TRANSFER',
+        name: '계좌이체',
+        easyDescription: '다른 사람에게 돈을 보내는 일',
+      },
     ],
     sttRecheckNeeded: true,
   },
@@ -42,13 +80,22 @@ const fraudResult: AnalyzeResult = {
   fraudCheck: {
     detected: true,
     dismissible: true,
-    patterns: [{ type: 'SAFE_ACCOUNT', label: '안전계좌 요구', evidence: '안전계좌로 옮기래', explanation: '위험해요' }],
+    patterns: [
+      {
+        type: 'SAFE_ACCOUNT',
+        label: '안전계좌 요구',
+        evidence: '안전계좌로 옮기래',
+        explanation: '위험해요',
+      },
+    ],
     safetyActions: [{ order: 1, action: '전화를 끊으세요' }],
     guardianNotification: null,
   },
   classification: {
     status: 'SUSPENDED',
+    originalUtterance: '안전계좌로 옮기래요',
     correctedUtterance: '안전계좌로 옮기래요',
+    correctionApplied: false,
     confidence: null,
     task: null,
     candidates: [],
@@ -61,8 +108,17 @@ const fraudResult: AnalyzeResult = {
 const taskSelectionResult: TaskSelectionResult = {
   consultationId: 'c1',
   status: 'TASK_CONFIRMED',
-  task: { taskTypeCode: 'CARD_REISSUE', name: '카드 재발급', easyDescription: '카드를 새로 받는 일' },
-  visitDecision: { decision: 'CHECK_NEEDED', reason: '전화로 먼저 확인하세요', remoteMethods: [], officialChannels: [] },
+  task: {
+    taskTypeCode: 'CARD_REISSUE',
+    name: '카드 재발급',
+    easyDescription: '카드를 새로 받는 일',
+  },
+  visitDecision: {
+    decision: 'CHECK_NEEDED',
+    reason: '전화로 먼저 확인하세요',
+    remoteMethods: [],
+    officialChannels: [],
+  },
 }
 
 describe('consultationFlow store', () => {
@@ -73,7 +129,11 @@ describe('consultationFlow store', () => {
   it('stores the utterance captured from voice input along with its confidence', () => {
     const store = useConsultationFlowStore()
 
-    store.setUtterance({ utterance: '통장을 잃어버렸어요', inputMethod: 'VOICE', sttConfidence: 0.87 })
+    store.setUtterance({
+      utterance: '통장을 잃어버렸어요',
+      inputMethod: 'VOICE',
+      sttConfidence: 0.87,
+    })
 
     expect(store.utterance).toBe('통장을 잃어버렸어요')
     expect(store.inputMethod).toBe('VOICE')
@@ -97,6 +157,9 @@ describe('consultationFlow store', () => {
     expect(store.status).toBe('TASK_CONFIRMED')
     expect(store.task?.taskTypeCode).toBe('PASSBOOK_REISSUE')
     expect(store.visitDecision?.decision).toBe('VISIT_REQUIRED')
+    expect(store.originalUtterance).toBe('통장을 일어버렸어요')
+    expect(store.correctedUtterance).toBe('통장을 잃어버렸어요')
+    expect(store.correctionApplied).toBe(true)
   })
 
   it('captures fraud check details and guidance from an analyze result', () => {
@@ -107,6 +170,19 @@ describe('consultationFlow store', () => {
     expect(store.fraudCheck?.detected).toBe(true)
     expect(store.fraudCheck?.patterns).toHaveLength(1)
     expect(store.guidance).toBeNull()
+  })
+
+  it('clears a previous analysis when the user provides a new utterance', () => {
+    const store = useConsultationFlowStore()
+    store.setUtterance({ utterance: '통장을 일어버렸어요', inputMethod: 'VOICE' })
+    store.setAnalyzeResult(analyzeResult)
+
+    store.setUtterance({ utterance: '카드를 잃어버렸어요', inputMethod: 'TEXT' })
+
+    expect(store.status).toBeNull()
+    expect(store.consultationId).toBeNull()
+    expect(store.correctionApplied).toBe(false)
+    expect(store.correctedUtterance).toBe('')
   })
 
   it('overwrites the task and visit decision after a candidate is selected, and clears the candidate list', () => {
@@ -133,8 +209,19 @@ describe('consultationFlow store', () => {
     }
     const branch: BranchRecommendation = {
       rank: 1,
-      branch: { branchId: 1, name: 'KB국민은행 종로지점', address: '서울', phone: '02-000-0000', distanceKm: 1 },
-      visitTime: { date: '2026-09-08', dayLabel: '내일', timeSlot: '10:00-11:00', timeLabel: '오전 10시' },
+      branch: {
+        branchId: 1,
+        name: 'KB국민은행 종로지점',
+        address: '서울',
+        phone: '02-000-0000',
+        distanceKm: 1,
+      },
+      visitTime: {
+        date: '2026-09-08',
+        dayLabel: '내일',
+        timeSlot: '10:00-11:00',
+        timeLabel: '오전 10시',
+      },
       expectedWaitMinutes: 5,
       congestionSource: 'MOCK',
       score: 90,
@@ -150,7 +237,11 @@ describe('consultationFlow store', () => {
 
   it('resets every field back to its initial value', () => {
     const store = useConsultationFlowStore()
-    store.setUtterance({ utterance: '통장을 잃어버렸어요', inputMethod: 'VOICE', sttConfidence: 0.87 })
+    store.setUtterance({
+      utterance: '통장을 잃어버렸어요',
+      inputMethod: 'VOICE',
+      sttConfidence: 0.87,
+    })
     store.setAnalyzeResult(analyzeResult)
 
     store.reset()
@@ -158,6 +249,9 @@ describe('consultationFlow store', () => {
     expect(store.utterance).toBe('')
     expect(store.inputMethod).toBe('TEXT')
     expect(store.sttConfidence).toBeNull()
+    expect(store.originalUtterance).toBe('')
+    expect(store.correctedUtterance).toBe('')
+    expect(store.correctionApplied).toBe(false)
     expect(store.consultationId).toBeNull()
     expect(store.status).toBeNull()
     expect(store.task).toBeNull()

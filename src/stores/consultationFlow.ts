@@ -16,6 +16,9 @@ export const useConsultationFlowStore = defineStore('consultationFlow', () => {
   const utterance = ref('')
   const inputMethod = ref<InputMethod>('TEXT')
   const sttConfidence = ref<number | null>(null)
+  const originalUtterance = ref('')
+  const correctedUtterance = ref('')
+  const correctionApplied = ref(false)
 
   const consultationId = ref<string | null>(null)
   const status = ref<ConsultationStatus | null>(null)
@@ -29,10 +32,15 @@ export const useConsultationFlowStore = defineStore('consultationFlow', () => {
   const recommendations = ref<BranchRecommendation[]>([])
   const selectedBranch = ref<BranchRecommendation | null>(null)
 
-  function setUtterance(payload: { utterance: string; inputMethod: InputMethod; sttConfidence?: number | null }) {
+  function setUtterance(payload: {
+    utterance: string
+    inputMethod: InputMethod
+    sttConfidence?: number | null
+  }) {
     utterance.value = payload.utterance
     inputMethod.value = payload.inputMethod
     sttConfidence.value = payload.sttConfidence ?? null
+    clearAnalysis()
   }
 
   function setAnalyzeResult(result: AnalyzeResult) {
@@ -44,6 +52,9 @@ export const useConsultationFlowStore = defineStore('consultationFlow', () => {
     visitDecision.value = result.visitDecision
     fraudCheck.value = result.fraudCheck
     guidance.value = result.guidance ?? null
+    originalUtterance.value = result.classification.originalUtterance
+    correctedUtterance.value = result.classification.correctedUtterance
+    correctionApplied.value = result.classification.correctionApplied
   }
 
   function setTaskSelection(result: TaskSelectionResult) {
@@ -70,6 +81,16 @@ export const useConsultationFlowStore = defineStore('consultationFlow', () => {
     utterance.value = ''
     inputMethod.value = 'TEXT'
     sttConfidence.value = null
+    clearAnalysis()
+    checklist.value = null
+    recommendations.value = []
+    selectedBranch.value = null
+  }
+
+  function clearAnalysis() {
+    originalUtterance.value = ''
+    correctedUtterance.value = ''
+    correctionApplied.value = false
     consultationId.value = null
     status.value = null
     task.value = null
@@ -78,15 +99,15 @@ export const useConsultationFlowStore = defineStore('consultationFlow', () => {
     visitDecision.value = null
     fraudCheck.value = null
     guidance.value = null
-    checklist.value = null
-    recommendations.value = []
-    selectedBranch.value = null
   }
 
   return {
     utterance,
     inputMethod,
     sttConfidence,
+    originalUtterance,
+    correctedUtterance,
+    correctionApplied,
     consultationId,
     status,
     task,

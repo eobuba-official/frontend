@@ -78,7 +78,9 @@ export const useConsultationStore = defineStore('consultation', () => {
       fraudCheck: previousAnalyzeResult.fraudCheck,
       classification: {
         status: 'CONFIRMED',
+        originalUtterance: previousAnalyzeResult.classification.originalUtterance,
         correctedUtterance: correctedUtterance.value,
+        correctionApplied: previousAnalyzeResult.classification.correctionApplied,
         confidence: null,
         task: selectedResult.task,
         candidates: [],
