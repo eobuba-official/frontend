@@ -35,13 +35,14 @@ body {
 
 #app {
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
 h1,
 h2,
 h3,
 h4 {
-  font-family: var(--font-display);
+  font-family: var(--font-body);
   margin: 0;
   text-wrap: balance;
 }

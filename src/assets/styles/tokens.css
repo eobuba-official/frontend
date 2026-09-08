@@ -28,9 +28,7 @@
   --color-desktop-backdrop: #dcdad5;
 
   /* ---------- type ---------- */
-  --font-display: 'Gowun Batang', serif;
   --font-body: 'Noto Sans KR', 'Malgun Gothic', sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
   --text-xs: 0.7rem;
   --text-sm: 0.75rem;
@@ -38,6 +36,9 @@
   --text-lg: 0.95rem;
   --text-xl: 1.1rem;
   --text-2xl: 1.4rem;
+  /* reserved for the handful of decisive moments (home hero, visit decision, etc.) —
+     not for routine headings, which stay at --text-2xl */
+  --text-hero: 2.35rem;
 
   /* ---------- spacing scale (4px base) ---------- */
   --space-1: 4px;
