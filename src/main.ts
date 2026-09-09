@@ -13,6 +13,12 @@ registerServiceWorker()
 
 const app = createApp(App)
 
+// AppErrorBoundary handles render/setup errors; this catches what escapes it, such as
+// throws inside watchers and async handlers, so they're never silently swallowed
+app.config.errorHandler = (error, _instance, info) => {
+  console.error('[app] error', info, error)
+}
+
 app.use(createPinia())
 app.use(router)
 

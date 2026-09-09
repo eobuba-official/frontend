@@ -1,3 +1,4 @@
+export { default as AppErrorBoundary } from './AppErrorBoundary.vue'
 export { default as AppScreen } from './AppScreen.vue'
 export { default as BaseButton } from './BaseButton.vue'
 export { default as BottomActionBar } from './BottomActionBar.vue'
