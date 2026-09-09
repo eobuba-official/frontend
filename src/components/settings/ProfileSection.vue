@@ -1,13 +1,14 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { User } from '@lucide/vue'
 import type { MeResult } from '@/api/types'
 import { authService } from '@/services/authService'
 import BaseButton from '@/components/common/BaseButton.vue'
+import { nextHoduAvatar } from '@/utils/hoduAvatars'
 
 const profile = ref<MeResult | null>(null)
 const loading = ref(true)
 const error = ref('')
+const profileAvatar = nextHoduAvatar()
 
 async function loadProfile() {
   loading.value = true
@@ -27,7 +28,7 @@ onMounted(loadProfile)
 <template>
   <section class="profile-card" aria-label="내 프로필" :aria-busy="loading">
     <span class="profile-card__icon" aria-hidden="true">
-      <User :size="28" :stroke-width="2.2" />
+      <img :src="profileAvatar" alt="" />
     </span>
     <div class="profile-card__copy">
       <p v-if="loading" role="status">내 정보를 불러오는 중이에요.</p>
@@ -57,22 +58,28 @@ onMounted(loadProfile)
   display: grid;
   place-items: center;
   flex-shrink: 0;
-  width: 56px;
-  height: 56px;
+  width: 40px;
+  height: 40px;
   border-radius: var(--radius-pill);
   background: var(--color-yellow-light);
   color: var(--color-ink);
+}
+.profile-card__icon img {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
 }
 .profile-card__copy {
   min-width: 0;
   overflow-wrap: anywhere;
 }
 .profile-card h2 {
-  font-size: var(--text-xl);
+  font-size: var(--text-lg);
+  font-weight: 800;
 }
 .profile-card p {
   color: var(--color-ink-soft);
-  font-size: var(--text-base);
+  font-size: var(--text-sm);
   font-weight: 600;
 }
 </style>

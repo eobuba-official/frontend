@@ -72,7 +72,7 @@ function viewOnMap() {
     </template>
 
     <section class="branches">
-      <h1>방문하기 좋은 지점이에요</h1>
+      <h1>방문할 지점을 골라보세요</h1>
       <p v-if="isLoading">가까운 지점과 시간을 찾고 있어요.</p>
       <p v-else-if="!errorMessage">거리와 예상 대기 시간을 비교해 보세요.</p>
       <p v-else class="branches__error">{{ errorMessage }}</p>

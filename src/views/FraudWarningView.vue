@@ -154,26 +154,33 @@ onMounted(async () => {
             {{ guardiansError }}
           </p>
           <ul v-else-if="guardians.length > 0" class="fraud__steps">
-            <li v-for="guardian in guardians" :key="guardian.guardianId" class="fraud__guardian-row">
-              <span class="fraud__step-icon" aria-hidden="true">
-                <User :size="20" :stroke-width="2.2" />
-              </span>
-              <span class="fraud__guardian-info">
-                <strong class="fraud__guardian-heading">
-                  <span>{{ guardian.name }}</span>
-                  <span class="fraud__guardian-relation">{{ guardian.relation }}</span>
-                </strong>
-                <small>{{ formatPhone(guardian.phoneNumber) }}</small>
-              </span>
-              <button
-                class="fraud__call-button"
-                type="button"
-                :aria-label="`${guardian.name}에게 전화하기`"
-                @click="callGuardian(guardian.phoneNumber)"
-              >
-                <PhoneCall :size="18" :stroke-width="2.2" />
-              </button>
-            </li>
+            <template v-for="(guardian, index) in guardians" :key="guardian.guardianId">
+              <li class="fraud__guardian-row">
+                <span class="fraud__step-icon" aria-hidden="true">
+                  <User :size="20" :stroke-width="2.2" />
+                </span>
+                <span class="fraud__guardian-info">
+                  <strong class="fraud__guardian-heading">
+                    <span>{{ guardian.name }}</span>
+                    <span class="fraud__guardian-relation">{{ guardian.relation }}</span>
+                  </strong>
+                  <small>{{ formatPhone(guardian.phoneNumber) }}</small>
+                </span>
+                <button
+                  class="fraud__call-button"
+                  type="button"
+                  :aria-label="`${guardian.name}에게 전화하기`"
+                  @click="callGuardian(guardian.phoneNumber)"
+                >
+                  <PhoneCall :size="18" :stroke-width="2.2" />
+                </button>
+              </li>
+              <li
+                v-if="index < guardians.length - 1"
+                class="fraud__guardian-divider"
+                aria-hidden="true"
+              ></li>
+            </template>
           </ul>
           <div v-else class="fraud__empty">
             <p>등록된 가족이 없어요. 가족을 등록해두면 더 안전해요.</p>
@@ -403,6 +410,12 @@ onMounted(async () => {
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-2) 0;
+}
+
+.fraud__guardian-divider {
+  height: 1px;
+  margin-inline: var(--space-4);
+  background: var(--color-line);
 }
 
 .fraud__guardian-info {

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { Keyboard, ShieldAlert } from '@lucide/vue'
+import { CalendarDays, Keyboard, MoonStar, ShieldAlert, Sun, Sunrise, Sunset } from '@lucide/vue'
 import { useRouter } from 'vue-router'
 import AppScreen from '@/components/common/AppScreen.vue'
 import BottomTabBar from '@/components/common/BottomTabBar.vue'
@@ -56,6 +56,14 @@ const greetingLabel = computed(() => {
   if (hour >= 14 && hour < 18) return '편안한 오후예요'
   if (hour >= 18 && hour < 22) return '차분한 저녁이에요'
   return '편히 쉬실 시간이에요'
+})
+
+const greetingIcon = computed(() => {
+  const hour = today.getHours()
+  if (hour >= 5 && hour < 11) return Sunrise
+  if (hour >= 11 && hour < 18) return Sun
+  if (hour >= 18 && hour < 22) return Sunset
+  return MoonStar
 })
 
 async function handleVoiceStart() {
@@ -235,13 +243,21 @@ onBeforeUnmount(() => {
           ></span>
           <div class="home__brand-copy">
             <h1 class="home__brand-name">어부바</h1>
-            <p class="home__brand-tagline">어르신 부담 바로덜기</p>
+            <p class="home__brand-tagline">어르신 부담 바로 덜기</p>
           </div>
         </div>
       </header>
 
       <section class="home__greeting" aria-label="오늘의 인사">
-        <p class="home__greeting-date">{{ todayLabel }}</p>
+        <div class="home__greeting-top">
+          <p class="home__greeting-date">
+            <CalendarDays :size="15" :stroke-width="2.2" aria-hidden="true" />
+            {{ todayLabel }}
+          </p>
+          <span class="home__greeting-icon" aria-hidden="true">
+            <component :is="greetingIcon" :size="22" :stroke-width="2.2" />
+          </span>
+        </div>
         <p class="home__greeting-message">{{ greetingLabel }}</p>
         <p class="home__greeting-tagline">필요한 은행 일, 어부바가 도와드릴게요</p>
       </section>
@@ -360,19 +376,61 @@ onBeforeUnmount(() => {
   position: relative;
   overflow: hidden;
   padding: var(--space-5);
+  border: 1px solid rgba(218, 166, 18, 0.14);
   border-radius: var(--radius-lg);
-  background: linear-gradient(135deg, var(--color-yellow-light), var(--color-yellow-faint));
+  background: linear-gradient(145deg, #fff3b8 0%, var(--color-yellow-faint) 72%, #fffdf4 100%);
+  box-shadow: 0 8px 22px rgba(218, 166, 18, 0.08);
+}
+
+.home__greeting::after {
+  position: absolute;
+  right: -34px;
+  bottom: -52px;
+  width: 128px;
+  height: 128px;
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.42);
+  content: '';
+}
+
+.home__greeting-top {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
 }
 
 .home__greeting-date {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  padding: 5px 10px;
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.68);
   color: var(--color-accent-deep);
-  font-size: var(--text-base);
+  font-size: var(--text-sm);
   font-weight: 700;
 }
 
+.home__greeting-icon {
+  display: grid;
+  flex: 0 0 40px;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgba(218, 166, 18, 0.16);
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--color-accent-deep);
+}
+
 .home__greeting-message {
-  margin-top: var(--space-1);
-  max-width: 70%;
+  position: relative;
+  z-index: 1;
+  margin-top: var(--space-3);
   color: var(--color-ink);
   font-family: var(--font-body);
   font-size: var(--text-2xl);
@@ -381,22 +439,12 @@ onBeforeUnmount(() => {
 }
 
 .home__greeting-tagline {
+  position: relative;
+  z-index: 1;
   margin-top: var(--space-1);
   color: var(--color-ink-soft);
   font-size: var(--text-base);
   font-weight: 600;
-}
-
-.home__greeting-mascot {
-  position: absolute;
-  top: 50%;
-  right: var(--space-4);
-  width: 72px;
-  height: 72px;
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: contain;
-  transform: translateY(-50%);
 }
 
 .home__hero {
@@ -514,6 +562,10 @@ onBeforeUnmount(() => {
 
   .home__greeting-message {
     font-size: var(--text-xl);
+  }
+
+  .home__greeting-tagline {
+    font-size: var(--text-sm);
   }
 
   .home__hero-caption {

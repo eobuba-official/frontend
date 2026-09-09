@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { ShieldAlert } from '@lucide/vue'
+
 withDefaults(
   defineProps<{
     title: string
@@ -12,7 +14,9 @@ withDefaults(
 
 <template>
   <aside class="warning-box" role="alert">
-    <div class="warning-box__icon" aria-hidden="true">!</div>
+    <div class="warning-box__icon" aria-hidden="true">
+      <ShieldAlert :size="20" :stroke-width="2.2" />
+    </div>
     <div class="warning-box__body">
       <strong class="warning-box__title">{{ title }}</strong>
       <p v-if="description" class="warning-box__description">{{ description }}</p>
@@ -24,7 +28,7 @@ withDefaults(
 <style scoped>
 .warning-box {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-3);
   padding: var(--space-4);
   border: 1px solid var(--color-alert-line);
@@ -37,14 +41,12 @@ withDefaults(
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  flex: 0 0 22px;
-  width: 22px;
-  height: 22px;
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
   border-radius: var(--radius-pill);
-  background: var(--color-alert);
-  color: var(--color-surface);
-  font-size: var(--text-sm);
-  font-weight: 700;
+  background: var(--color-surface);
+  color: var(--color-alert);
 }
 
 .warning-box__body {
@@ -57,10 +59,15 @@ withDefaults(
 .warning-box__title {
   color: var(--color-alert);
   font-size: var(--text-base);
+  font-weight: 800;
+  line-height: 1.4;
+  word-break: keep-all;
 }
 
 .warning-box__description {
   color: var(--color-ink-soft);
   font-size: var(--text-sm);
+  line-height: 1.6;
+  word-break: keep-all;
 }
 </style>
