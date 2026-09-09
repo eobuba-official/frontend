@@ -132,7 +132,7 @@ describe('consultationService (integration: client interceptors + service)', () 
         200,
         {
           success: true,
-          data: { recommendations: [], weights: { wait: 0.6, distance: 0.4 } },
+          data: { recommendations: [], walkingSpeedKmh: 4 },
           error: null,
         },
       ]
@@ -145,7 +145,7 @@ describe('consultationService (integration: client interceptors + service)', () 
       lng: 127,
     })
 
-    expect(result.weights).toEqual({ wait: 0.6, distance: 0.4 })
+    expect(result.walkingSpeedKmh).toBe(4)
   })
 
   it('getBranchRecommendationsWithFallback returns the GPS result directly when it has recommendations', async () => {

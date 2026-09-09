@@ -7,6 +7,8 @@ import type {
   ChecklistAnswerResult,
   ChecklistQuestionsResult,
   ConsultationHistoryResult,
+  NearbyBranchQuery,
+  NearbyBranchResult,
   ResolvedChecklistResult,
   TaskSelectionRequest,
   TaskSelectionResult,
@@ -72,6 +74,13 @@ export const consultationService = {
       lat: fallbackLocation.lat,
       lng: fallbackLocation.lng,
     })
+  },
+
+  // No consultationId needed — response has no wait-time data though, only
+  // distance/walkMinutes (see NearbyBranchQuery/NearbyBranchResult in api/types.ts).
+  async getNearbyBranches(query: NearbyBranchQuery): Promise<NearbyBranchResult> {
+    const response = await apiClient.get<NearbyBranchResult>('/branches/nearby', { params: query })
+    return response.data
   },
 
   async getTaskTypes(): Promise<TaskType[]> {

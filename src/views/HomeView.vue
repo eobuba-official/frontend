@@ -4,7 +4,6 @@ import { Keyboard, ShieldAlert } from '@lucide/vue'
 import { useRouter } from 'vue-router'
 import AppScreen from '@/components/common/AppScreen.vue'
 import BottomTabBar from '@/components/common/BottomTabBar.vue'
-import logoMark from '@/assets/img/logo-mark.png'
 import charMascot from '@/assets/img/char.png'
 import { routePaths } from '@/router/routePaths'
 import { speechAnalysisService } from '@/services/speechAnalysisService'
@@ -43,11 +42,11 @@ const todayLabel = computed(
 
 const greetingLabel = computed(() => {
   const hour = today.getHours()
-  if (hour >= 5 && hour < 11) return '좋은 아침이에요 🌞'
-  if (hour >= 11 && hour < 14) return '점심 맛있게 드셨나요 🍚'
-  if (hour >= 14 && hour < 18) return '좋은 오후예요 😊'
-  if (hour >= 18 && hour < 22) return '좋은 저녁이에요 🌆'
-  return '늦은 밤이에요 😊'
+  if (hour >= 5 && hour < 11) return '좋은 아침이에요'
+  if (hour >= 11 && hour < 14) return '점심 맛있게 드셨나요'
+  if (hour >= 14 && hour < 18) return '좋은 오후예요'
+  if (hour >= 18 && hour < 22) return '좋은 저녁이에요'
+  return '늦은 밤이에요'
 })
 
 async function handleVoiceStart() {
@@ -182,7 +181,7 @@ onBeforeUnmount(closeAudioGraph)
         <div class="home__brand">
           <span
             class="home__brand-avatar"
-            :style="{ backgroundImage: `url(${logoMark})` }"
+            :style="{ backgroundImage: `url(${charMascot})` }"
             aria-hidden="true"
           ></span>
           <div class="home__brand-copy">
@@ -196,11 +195,6 @@ onBeforeUnmount(closeAudioGraph)
         <p class="home__greeting-date">{{ todayLabel }}</p>
         <p class="home__greeting-message">{{ greetingLabel }}</p>
         <p class="home__greeting-tagline">오늘도 어부바가 함께할게요</p>
-        <span
-          class="home__greeting-mascot"
-          :style="{ backgroundImage: `url(${charMascot})` }"
-          aria-hidden="true"
-        ></span>
       </section>
 
       <section class="home__hero" aria-label="음성으로 말씀해 주세요">
@@ -279,19 +273,19 @@ onBeforeUnmount(closeAudioGraph)
 .home__brand {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-2);
   min-width: 0;
 }
 
 .home__brand-avatar {
-  flex: 0 0 52px;
-  width: 52px;
-  height: 52px;
+  flex: 0 0 60px;
+  width: 60px;
+  height: 60px;
   border-radius: var(--radius-pill);
   background-color: var(--color-yellow-light);
   background-repeat: no-repeat;
   background-position: center;
-  background-size: 58% auto;
+  background-size: 78% auto;
 }
 
 .home__brand-copy {
