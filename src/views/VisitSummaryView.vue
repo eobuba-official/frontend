@@ -79,7 +79,7 @@ function handleFinish() {
       </ul>
 
       <div v-if="consultationNote" class="summary-note">
-        <p class="summary-note__label">상담 요약</p>
+        <p class="summary-note__label">업무 요약</p>
         <p class="summary-note__text">{{ consultationNote }}</p>
       </div>
     </section>

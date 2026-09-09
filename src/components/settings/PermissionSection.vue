@@ -35,12 +35,15 @@ const voiceSwitchOn = computed(() => voiceEnabled.value && !voiceBlocked.value)
 const turnOffModalCopy = computed(() => {
   if (pendingTurnOff.value === 'location') {
     return {
-      title: '위치 권한을 끌까요?',
-      description: '가까운 지점을 찾을 때 위치를 사용하지 않아요.',
+      title: '위치 사용을 끌까요?',
+      description: '끄면 현재 위치를 기준으로\n가까운 은행 지점을 찾을 수 없어요.',
     }
   }
   if (pendingTurnOff.value === 'voice') {
-    return { title: '음성 권한을 끌까요?', description: '말로 요청하는 기능을 사용할 수 없어요.' }
+    return {
+      title: '음성 입력을 끌까요?',
+      description: '끄면 홈 화면에서\n말로 요청하는 기능을 사용할 수 없어요.',
+    }
   }
   return null
 })
@@ -48,14 +51,14 @@ const turnOffModalCopy = computed(() => {
 const blockedNoticeCopy = computed(() => {
   if (blockedNotice.value === 'location') {
     return {
-      title: '위치 권한이 차단돼 있어요',
-      description: '브라우저 설정에서 이 사이트의 위치 접근을 허용해야 사용할 수 있어요.',
+      title: '위치 접근이 차단되어 있어요',
+      description: '가까운 지점을 찾으려면 브라우저 설정에서\n이 사이트의 위치 접근을 허용해 주세요.',
     }
   }
   if (blockedNotice.value === 'voice') {
     return {
-      title: '음성 권한이 차단돼 있어요',
-      description: '브라우저 설정에서 이 사이트의 마이크 접근을 허용해야 사용할 수 있어요.',
+      title: '마이크 접근이 차단되어 있어요',
+      description: '말로 요청하려면 브라우저 설정에서\n이 사이트의 마이크 접근을 허용해 주세요.',
     }
   }
   return null
@@ -184,7 +187,7 @@ function closeBlockedNotice() {
 
   <dialog ref="textSizeDialog" class="text-size-dialog" aria-labelledby="text-size-title">
     <h2 id="text-size-title">글자 크기</h2>
-    <p>읽기 편한 크기를 선택해주세요.</p>
+    <p>읽기 편한 크기를 선택해 주세요.</p>
     <fieldset class="text-size-options">
       <legend class="text-size-legend">글자 크기 선택</legend>
       <label v-for="option in textSizeOptions" :key="option.value" class="text-size-option">
@@ -198,8 +201,9 @@ function closeBlockedNotice() {
         <span>{{ option.label }}</span>
       </label>
     </fieldset>
-    <p class="text-size-preview">어부바와 함께 편안하게 이용해요.</p>
-    <BaseButton block @click="textSizeDialog?.close()">완료</BaseButton>
+    <div class="text-size-dialog__actions">
+      <BaseButton block @click="textSizeDialog?.close()">완료</BaseButton>
+    </div>
   </dialog>
 
   <ConfirmModal
@@ -211,7 +215,7 @@ function closeBlockedNotice() {
   >
     <template #actions>
       <BaseButton variant="ghost" block @click="cancelTurnOff">취소</BaseButton>
-      <BaseButton block @click="confirmTurnOff">끌게요</BaseButton>
+      <BaseButton block @click="confirmTurnOff">끄기</BaseButton>
     </template>
   </ConfirmModal>
 
@@ -224,7 +228,7 @@ function closeBlockedNotice() {
     @close="closeBlockedNotice"
   >
     <template #actions>
-      <BaseButton block @click="closeBlockedNotice">확인했어요</BaseButton>
+      <BaseButton block @click="closeBlockedNotice">확인</BaseButton>
     </template>
   </ConfirmModal>
 </template>
@@ -396,7 +400,7 @@ function closeBlockedNotice() {
   accent-color: var(--color-ink);
   flex-shrink: 0;
 }
-.text-size-preview {
-  color: var(--color-ink-soft);
+.text-size-dialog__actions {
+  margin-top: var(--space-5);
 }
 </style>

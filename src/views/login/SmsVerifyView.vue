@@ -80,8 +80,8 @@ async function handleVerify() {
   <AppScreen>
     <template #header>
       <button class="back-button" type="button" @click="router.push(routePaths.login)">
-        <ChevronLeft :size="18" :stroke-width="2.4" />
-        뒤로
+        <ChevronLeft :size="18" :stroke-width="2.4" aria-hidden="true" />
+        <span>뒤로</span>
       </button>
     </template>
 
@@ -121,7 +121,14 @@ async function handleVerify() {
   color: var(--color-ink-soft);
   font: inherit;
   font-weight: 700;
+  line-height: 1;
   cursor: pointer;
+}
+
+.back-button > svg {
+  display: block;
+  flex-shrink: 0;
+  transform: translateY(1px);
 }
 
 .verify {

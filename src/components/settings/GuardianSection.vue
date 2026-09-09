@@ -28,13 +28,20 @@ const canAddGuardian = computed(
 
 const formattedNewGuardianPhone = computed(() => formatPhone(`010${newGuardianPhoneDigits.value}`))
 const addConfirmationDescription = computed(
-  () =>
-    `${formattedNewGuardianPhone.value}, ${newGuardianRelation.value} ${newGuardianName.value.trim()}님이 맞나요?`,
+  () => `${newGuardianName.value.trim()}님 · ${newGuardianRelation.value}\n${formattedNewGuardianPhone.value}`,
 )
 
 const pendingDeleteGuardian = ref<Guardian | null>(null)
 const isDeletingGuardian = ref(false)
 const deleteGuardianError = ref('')
+const deleteGuardianDescription = computed(() => {
+  const guardian = pendingDeleteGuardian.value
+  if (!guardian) return ''
+  if (guardians.value.length === 1) {
+    return '등록을 해제하면 알림을 받을 가족이 없어져요.\n수상한 전화가 감지되어도 가족에게 알릴 수 없어요.'
+  }
+  return `등록을 해제하면 ${guardian.name}님에게\n수상한 전화 알림을 더 이상 보내지 않아요.`
+})
 
 function formatPhone(phoneNumber: string) {
   return phoneNumber.length === 11 ? `${phoneNumber.slice(0, 3)}-${phoneNumber.slice(3, 7)}-${phoneNumber.slice(7)}` : phoneNumber
@@ -125,7 +132,7 @@ async function confirmDeleteGuardian() {
     guardians.value = guardians.value.filter((item) => item.guardianId !== guardian.guardianId)
     pendingDeleteGuardian.value = null
   } catch (error) {
-    deleteGuardianError.value = error instanceof Error ? error.message : '삭제하지 못했어요. 다시 시도해 주세요.'
+    deleteGuardianError.value = error instanceof Error ? error.message : '가족 등록을 해제하지 못했어요. 다시 시도해 주세요.'
   } finally {
     isDeletingGuardian.value = false
   }
@@ -148,8 +155,8 @@ async function confirmDeleteGuardian() {
               <User :size="20" :stroke-width="2.2" />
             </span>
             <span class="settings-row__copy">
-              <strong>
-                {{ guardian.name }}
+              <strong class="guardian-heading">
+                <span>{{ guardian.name }}</span>
                 <span class="guardian-relation-badge">{{ guardian.relation }}</span>
                 <span v-if="guardian.status === 'DECLINED'" class="guardian-status-badge">
                   수신 거부
@@ -163,7 +170,7 @@ async function confirmDeleteGuardian() {
             <button
               class="settings-row__delete"
               type="button"
-              :aria-label="`${guardian.name} 삭제`"
+              :aria-label="`${guardian.name}님 가족 등록 해제`"
               @click="requestDeleteGuardian(guardian)"
             >
               <Trash2 :size="18" :stroke-width="2.2" />
@@ -181,8 +188,8 @@ async function confirmDeleteGuardian() {
 
   <ConfirmModal
     v-if="isAddGuardianOpen"
-    title="가족을 추가해 주세요"
-    description="수상한 전화가 감지되면 이 분께 바로 알려드려요."
+    title="알림을 받을 가족을 추가해 주세요"
+    :description="'수상한 전화가 감지되면\n등록한 가족에게 알림을 보내드려요.'"
     @close="closeAddGuardian"
   >
     <label class="modal-field" for="new-guardian-name">
@@ -200,7 +207,7 @@ async function confirmDeleteGuardian() {
     </div>
 
     <div class="modal-relation">
-      <span>어떤 사이신가요</span>
+      <span>나와 어떤 사이인가요?</span>
       <div class="modal-relation__options">
         <button
           v-for="option in relations"
@@ -232,15 +239,15 @@ async function confirmDeleteGuardian() {
     :description="addConfirmationDescription"
     @close="cancelAddConfirmation"
   >
-    <p class="modal-guide">번호가 틀리면 안내 문자가 다른 사람에게 갈 수 있어요.</p>
+    <p class="modal-guide">입력한 번호로 수상한 전화 알림 안내 문자를 보내드려요.</p>
     <p v-if="addGuardianError" class="modal-error">{{ addGuardianError }}</p>
 
     <template #actions>
       <BaseButton variant="ghost" block :disabled="isAddingGuardian" @click="cancelAddConfirmation">
-        다시 수정
+        다시 입력
       </BaseButton>
       <BaseButton block :disabled="isAddingGuardian" @click="confirmAddGuardian">
-        {{ isAddingGuardian ? '추가하는 중...' : '맞아요' }}
+        {{ isAddingGuardian ? '추가하는 중...' : '추가하기' }}
       </BaseButton>
     </template>
   </ConfirmModal>
@@ -267,8 +274,8 @@ async function confirmDeleteGuardian() {
   <ConfirmModal
     v-if="pendingDeleteGuardian"
     role="alertdialog"
-    :title="`${pendingDeleteGuardian.name}님을 삭제할까요?`"
-    description="삭제하면 수상한 전화가 감지돼도 이 분께는 더 이상 알려드리지 않아요."
+    :title="`${pendingDeleteGuardian.name}님의 가족 등록을 해제할까요?`"
+    :description="deleteGuardianDescription"
     @close="cancelDeleteGuardian"
   >
     <p v-if="deleteGuardianError" class="modal-error">{{ deleteGuardianError }}</p>
@@ -276,7 +283,7 @@ async function confirmDeleteGuardian() {
     <template #actions>
       <BaseButton variant="ghost" block @click="cancelDeleteGuardian">취소</BaseButton>
       <BaseButton block :disabled="isDeletingGuardian" @click="confirmDeleteGuardian">
-        {{ isDeletingGuardian ? '삭제하는 중...' : '삭제하기' }}
+        {{ isDeletingGuardian ? '해제하는 중...' : '등록 해제' }}
       </BaseButton>
     </template>
   </ConfirmModal>
@@ -344,6 +351,14 @@ async function confirmDeleteGuardian() {
   font-weight: 800;
 }
 
+.guardian-heading {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  line-height: 1.4;
+}
+
 .settings-row__copy small {
   color: var(--color-ink-soft);
   font-size: var(--text-sm);
@@ -371,23 +386,23 @@ async function confirmDeleteGuardian() {
 }
 
 .guardian-relation-badge {
-  margin-left: var(--space-2);
-  padding: 2px var(--space-2);
+  padding: 1px 6px;
   border-radius: var(--radius-pill);
   background: var(--color-yellow-light);
   color: var(--color-accent-deep);
-  font-size: var(--text-xs);
+  font-size: 0.65rem;
   font-weight: 700;
+  line-height: 1.4;
 }
 
 .guardian-status-badge {
-  margin-left: var(--space-1);
-  padding: 2px var(--space-2);
+  padding: 1px 6px;
   border-radius: var(--radius-pill);
   background: var(--color-alert-bg);
   color: var(--color-alert);
-  font-size: var(--text-xs);
+  font-size: 0.65rem;
   font-weight: 800;
+  line-height: 1.4;
 }
 
 .guardian-status-text {

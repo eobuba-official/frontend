@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { UserRound } from '@lucide/vue'
+import { User } from '@lucide/vue'
 import type { MeResult } from '@/api/types'
 import { authService } from '@/services/authService'
 import BaseButton from '@/components/common/BaseButton.vue'
@@ -26,7 +26,9 @@ onMounted(loadProfile)
 
 <template>
   <section class="profile-card" aria-label="내 프로필" :aria-busy="loading">
-    <span class="profile-card__icon" aria-hidden="true"><UserRound :size="28" /></span>
+    <span class="profile-card__icon" aria-hidden="true">
+      <User :size="28" :stroke-width="2.2" />
+    </span>
     <div class="profile-card__copy">
       <p v-if="loading" role="status">내 정보를 불러오는 중이에요.</p>
       <template v-else-if="error">
@@ -71,5 +73,6 @@ onMounted(loadProfile)
 .profile-card p {
   color: var(--color-ink-soft);
   font-size: var(--text-base);
+  font-weight: 600;
 }
 </style>
