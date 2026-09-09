@@ -65,6 +65,7 @@ function go(path: string) {
   align-items: center;
   justify-content: center;
   gap: 2px;
+  padding: var(--space-2) 0 0;
   border: 0;
   background: transparent;
   color: var(--color-ink-faint);
