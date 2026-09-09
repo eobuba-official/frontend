@@ -1,16 +1,15 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { Phone, X } from '@lucide/vue'
+import { Phone } from '@lucide/vue'
 import AppScreen from '@/components/common/AppScreen.vue'
 import BottomTabBar from '@/components/common/BottomTabBar.vue'
+import MapBottomSheet from '@/components/common/MapBottomSheet.vue'
 import MapLoadingOverlay from '@/components/common/MapLoadingOverlay.vue'
 import MapLocateButton from '@/components/common/MapLocateButton.vue'
-import kbLogo from '@/assets/img/kb.png'
-import { useBranchSheet } from '@/composables/useBranchSheet'
 import { buildMockBranchesNear } from '@/mocks/branches'
 import { consultationService } from '@/services/consultationService'
 import { branchMarkerImage, centerAboveSheet, myLocationMarkerImage } from '@/utils/branchMarkers'
-import { getCurrentLocation } from '@/utils/geolocation'
+import { FALLBACK_LOCATION, getCurrentLocation } from '@/utils/geolocation'
 import { loadKakaoMaps } from '@/utils/kakaoMaps'
 import type { KakaoCircle, KakaoMap, KakaoMarker } from '@/utils/kakaoMaps'
 import type { NearbyBranch } from '@/api/types'
@@ -80,6 +79,19 @@ async function initMap() {
   try {
     await loadKakaoMaps()
     const maps = window.kakao!.maps
+    if (!mapContainer.value) return
+
+    // paint the map right away at a fallback center instead of blocking the first
+    // render on the GPS fix (up to 5s) or the nearby-branches fetch — both refine
+    // the view in the background once they resolve, so this is what made the map
+    // feel slow to load before
+    const fallbackCenter = new maps.LatLng(FALLBACK_LOCATION.lat, FALLBACK_LOCATION.lng)
+    const mapInstance = new maps.Map(mapContainer.value, { center: fallbackCenter, level: 5 })
+    map = mapInstance
+    maps.event.addListener(mapInstance, 'click', () => {
+      selectedBranchId.value = null
+    })
+    isLoadingMap.value = false
 
     const location = await getCurrentLocation()
     hasMyLocation.value = !location.isFallback
@@ -88,12 +100,10 @@ async function initMap() {
     }
 
     const center = new maps.LatLng(location.lat, location.lng)
-    map = new maps.Map(mapContainer.value, { center, level: 5 })
+    mapInstance.setCenter(center)
 
     myLocationMarker = new maps.Marker({ position: center, image: myLocationMarkerImage(maps) })
-    myLocationMarker.setMap(map)
-
-    await loadNearbyBranches(location)
+    myLocationMarker.setMap(mapInstance)
 
     const circle: KakaoCircle = new maps.Circle({
       center,
@@ -104,22 +114,20 @@ async function initMap() {
       fillColor: '#ef6a67',
       fillOpacity: 0.12,
     })
-    circle.setMap(map)
+    circle.setMap(mapInstance)
+
+    await loadNearbyBranches(location)
 
     branchMarkers = nearbyBranches.value.map((branch) => {
       const marker = new maps.Marker({
         position: new maps.LatLng(branch.lat, branch.lng),
         image: branchMarkerImage(maps, false),
       })
-      marker.setMap(map)
+      marker.setMap(mapInstance)
       maps.event.addListener(marker, 'click', () => {
         selectedBranchId.value = branch.branchId
       })
       return { branch, marker }
-    })
-
-    maps.event.addListener(map, 'click', () => {
-      selectedBranchId.value = null
     })
   } catch (error) {
     mapError.value = error instanceof Error ? error.message : '지도를 불러오지 못했어요.'
@@ -137,17 +145,17 @@ const selectedBranch = computed(
   () => nearbyBranches.value.find((branch) => branch.branchId === selectedBranchId.value) ?? null,
 )
 
-const { sheetEl, sheetHeight } = useBranchSheet(
-  () => selectedBranch.value,
-  (branch, heightPx) => {
-    if (!map) return
-    const maps = window.kakao?.maps
-    if (!maps) return
-    centerAboveSheet(map, maps, new maps.LatLng(branch.lat, branch.lng), heightPx)
-  },
-)
+const sheetHeight = ref(0)
 
 const locateBtnOffset = computed(() => (selectedBranch.value ? sheetHeight.value + BUTTON_SHEET_GAP : 0))
+
+function centerMapAboveSheet(heightPx: number) {
+  const branch = selectedBranch.value
+  if (!branch || !map) return
+  const maps = window.kakao?.maps
+  if (!maps) return
+  centerAboveSheet(map, maps, new maps.LatLng(branch.lat, branch.lng), heightPx)
+}
 
 function closeSheet() {
   selectedBranchId.value = null
@@ -162,6 +170,13 @@ function formatDistance(km: number | null) {
   if (km < 1) return `${Math.round(km * 1000)}m`
   return `${km.toFixed(1)}km`
 }
+
+const sheetMetaLines = computed(() => {
+  const branch = selectedBranch.value
+  if (!branch) return []
+  const walk = branch.walkMinutes != null ? ` · 도보 약 ${branch.walkMinutes}분` : ''
+  return [`현재 위치에서 약 ${formatDistance(branch.distanceKm)}${walk}`, branch.address]
+})
 
 watch(selectedBranchId, () => {
   const maps = window.kakao?.maps
@@ -190,32 +205,26 @@ onMounted(initMap)
 
         <MapLocateButton :disabled="!hasMyLocation" :offset="locateBtnOffset" @click="recenterOnMe" />
 
-        <Transition name="explore-sheet">
-          <div v-if="selectedBranch" ref="sheetEl" class="explore__sheet">
-            <button type="button" class="explore__sheet-close" aria-label="닫기" @click="closeSheet">
-              <X :size="18" :stroke-width="2.4" />
-            </button>
-
-            <div class="explore__sheet-header">
-              <span class="explore__sheet-icon">
-                <img :src="kbLogo" alt="" />
-              </span>
-              <div class="explore__sheet-info">
-                <h2>{{ selectedBranch.name }}</h2>
-                <p class="explore__sheet-meta">
-                  현재 위치에서 약 {{ formatDistance(selectedBranch.distanceKm) }}
-                  <template v-if="selectedBranch.walkMinutes != null"> · 도보 약 {{ selectedBranch.walkMinutes }}분</template>
-                </p>
-                <p class="explore__sheet-address">{{ selectedBranch.address }}</p>
-              </div>
-            </div>
-
-            <button type="button" class="explore__sheet-call" @click="callBranch(selectedBranch)">
+        <MapBottomSheet
+          :sheet-key="selectedBranch?.branchId ?? null"
+          :title="selectedBranch?.name ?? ''"
+          :meta-lines="sheetMetaLines"
+          @close="closeSheet"
+          @measure="sheetHeight = $event"
+          @opened="centerMapAboveSheet"
+        >
+          <template #actions>
+            <button
+              v-if="selectedBranch"
+              type="button"
+              class="explore__sheet-call"
+              @click="callBranch(selectedBranch)"
+            >
               <Phone :size="18" :stroke-width="2.2" />
               전화하기
             </button>
-          </div>
-        </Transition>
+          </template>
+        </MapBottomSheet>
       </div>
     </div>
 
@@ -281,84 +290,6 @@ onMounted(initMap)
   color: var(--color-alert);
 }
 
-.explore__sheet {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  z-index: 3;
-  padding: var(--space-5) var(--screen-padding-x) calc(var(--space-5) + env(safe-area-inset-bottom, 0px));
-  border-radius: 24px 24px 0 0;
-  background: var(--color-surface);
-  border: 1px solid var(--color-line);
-  border-bottom: 0;
-}
-
-.explore__sheet-close {
-  position: absolute;
-  top: var(--space-4);
-  right: var(--space-4);
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  border: 0;
-  border-radius: var(--radius-pill);
-  background: var(--color-surface-alt);
-  color: var(--color-ink-soft);
-  cursor: pointer;
-}
-
-.explore__sheet-header {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-}
-
-.explore__sheet-icon {
-  display: grid;
-  flex-shrink: 0;
-  place-items: center;
-  width: 48px;
-  height: 48px;
-  overflow: hidden;
-  border-radius: var(--radius-md);
-  background: var(--color-yellow-light);
-}
-
-.explore__sheet-icon img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.explore__sheet-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.explore__sheet h2 {
-  padding-right: var(--space-8);
-  color: var(--color-ink);
-  font-family: var(--font-body);
-  font-size: var(--text-xl);
-  font-weight: 900;
-}
-
-.explore__sheet-meta {
-  margin-top: var(--space-1);
-  color: var(--color-ink-soft);
-  font-size: var(--text-base);
-  font-weight: 600;
-}
-
-.explore__sheet-address {
-  margin-top: var(--space-1);
-  color: var(--color-ink-soft);
-  font-size: var(--text-base);
-  font-weight: 500;
-}
-
 .explore__sheet-call {
   display: flex;
   align-items: center;
@@ -374,15 +305,5 @@ onMounted(initMap)
   font-size: var(--text-base);
   font-weight: 800;
   cursor: pointer;
-}
-
-.explore-sheet-enter-active,
-.explore-sheet-leave-active {
-  transition: transform 220ms cubic-bezier(0.65, 0, 0.35, 1);
-}
-
-.explore-sheet-enter-from,
-.explore-sheet-leave-to {
-  transform: translateY(100%);
 }
 </style>

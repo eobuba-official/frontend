@@ -186,7 +186,7 @@ onBeforeUnmount(closeAudioGraph)
           ></span>
           <div class="home__brand-copy">
             <h1 class="home__brand-name">어부바</h1>
-            <p class="home__brand-tagline">은행 업무를 도와드려요</p>
+            <p class="home__brand-tagline">은행 일, 어부바가 함께해요</p>
           </div>
         </div>
       </header>
