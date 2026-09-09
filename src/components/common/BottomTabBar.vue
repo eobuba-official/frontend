@@ -49,9 +49,10 @@ function go(path: string) {
 <style scoped>
 .tab-bar {
   display: flex;
+  flex-shrink: 0;
   align-items: stretch;
   justify-content: space-around;
-  height: var(--tabbar-height);
+  height: calc(var(--tabbar-height) + env(safe-area-inset-bottom, 0px));
   border-top: 1px solid var(--color-line);
   background: var(--color-surface);
   padding-bottom: env(safe-area-inset-bottom, 0px);
