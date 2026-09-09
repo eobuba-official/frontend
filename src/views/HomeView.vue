@@ -235,11 +235,12 @@ onBeforeUnmount(() => {
 
       <header class="home__header">
         <div class="home__brand">
-          <span
+          <img
             class="home__brand-avatar"
-            :style="{ backgroundImage: `url(${logoMark})` }"
+            :src="logoMark"
+            alt=""
             aria-hidden="true"
-          ></span>
+          />
           <div class="home__brand-copy">
             <h1 class="home__brand-name" aria-label="어부바">
               <span class="home__brand-initial home__brand-initial--eo">어</span>
@@ -351,11 +352,7 @@ onBeforeUnmount(() => {
   flex: 0 0 52px;
   width: 52px;
   height: 52px;
-  border-radius: var(--radius-pill);
-  background-color: transparent;
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: contain;
+  object-fit: contain;
 }
 
 .home__brand-copy {
