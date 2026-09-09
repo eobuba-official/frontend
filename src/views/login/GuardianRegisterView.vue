@@ -11,6 +11,11 @@ import { authService } from '@/services/authService'
 import { useAuthFlowStore } from '@/stores/authFlow'
 import type { GuardianRelation } from '@/api/types'
 
+interface RelationOption {
+  label: string
+  value: GuardianRelation
+}
+
 const router = useRouter()
 const authFlow = useAuthFlowStore()
 
@@ -18,9 +23,13 @@ if (!authFlow.signupToken) {
   router.replace(routePaths.login)
 }
 
-const relations: GuardianRelation[] = ['아들', '딸', '배우자', '기타']
+const relations: RelationOption[] = [
+  { label: '아들', value: '아들' },
+  { label: '딸', value: '딸' },
+  { label: '배우자', value: '배우자' },
+  { label: '보호자', value: '기타' },
+]
 
-const ownName = ref('')
 const guardianName = ref('')
 const guardianPhoneDigits = ref('')
 const relation = ref<GuardianRelation>('아들')
@@ -30,7 +39,7 @@ const isConfirmOpen = ref(false)
 
 const canRegister = computed(
   () =>
-    ownName.value.trim().length > 0 &&
+    authFlow.userName.trim().length > 0 &&
     guardianName.value.trim().length > 0 &&
     guardianPhoneDigits.value.length === 8 &&
     !isSubmitting.value,
@@ -42,8 +51,11 @@ const formattedGuardianPhone = computed(() =>
     ? `${guardianPhoneNumber.value.slice(0, 3)}-${guardianPhoneNumber.value.slice(3, 7)}-${guardianPhoneNumber.value.slice(7)}`
     : guardianPhoneNumber.value,
 )
+const relationLabel = computed(
+  () => relations.find((option) => option.value === relation.value)?.label ?? relation.value,
+)
 const confirmDescription = computed(
-  () => `${formattedGuardianPhone.value}, ${relation.value} ${guardianName.value.trim()}님이 맞나요?`,
+  () => `${formattedGuardianPhone.value}, ${relationLabel.value} ${guardianName.value.trim()}님이 맞나요?`,
 )
 
 function handleRegister() {
@@ -66,7 +78,7 @@ async function confirmRegister() {
   try {
     await authService.signup({
       signupToken: authFlow.signupToken ?? '',
-      name: ownName.value.trim(),
+      name: authFlow.userName.trim(),
       guardians: [
         {
           name: guardianName.value.trim(),
@@ -98,17 +110,6 @@ async function confirmRegister() {
       <h1>가족 한 분을<br />등록해 주세요</h1>
       <p class="guardian__lede">수상한 전화가 감지되면 이 분께<br />바로 알려드려요.</p>
 
-      <label class="name-field" for="own-name">
-        <span class="name-field__label">본인 이름</span>
-        <input
-          id="own-name"
-          v-model="ownName"
-          class="name-field__input"
-          type="text"
-          placeholder="이름을 입력해 주세요"
-        />
-      </label>
-
       <label class="name-field" for="guardian-name">
         <span class="name-field__label">가족 이름</span>
         <input
@@ -127,13 +128,13 @@ async function confirmRegister() {
         <div class="relation__options">
           <button
             v-for="option in relations"
-            :key="option"
+            :key="option.value"
             type="button"
             class="relation__chip"
-            :class="{ 'relation__chip--active': relation === option }"
-            @click="relation = option"
+            :class="{ 'relation__chip--active': relation === option.value }"
+            @click="relation = option.value"
           >
-            {{ option }}
+            {{ option.label }}
           </button>
         </div>
       </div>

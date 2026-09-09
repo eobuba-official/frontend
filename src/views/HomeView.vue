@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { Keyboard, ShieldAlert } from '@lucide/vue'
 import { useRouter } from 'vue-router'
 import AppScreen from '@/components/common/AppScreen.vue'
@@ -18,6 +18,7 @@ const isListening = ref(false)
 const isProcessing = ref(false)
 const micError = ref('')
 const voiceMediaStream = ref<MediaStream | null>(null)
+const idleMascotMood = ref<'default' | 'sleepy' | 'surprised'>('default')
 
 let mediaStream: MediaStream | null = null
 let audioContext: AudioContext | null = null
@@ -25,11 +26,19 @@ let sourceNode: MediaStreamAudioSourceNode | null = null
 let processorNode: ScriptProcessorNode | null = null
 let silentGainNode: GainNode | null = null
 let audioChunks: Float32Array[] = []
+let idleTimer: number | undefined
+let sleepyTimer: number | undefined
+let surprisedTimer: number | undefined
 
 const voiceOrbState = computed<'idle' | 'listening' | 'thinking'>(() => {
   if (isProcessing.value) return 'thinking'
   if (isListening.value) return 'listening'
   return 'idle'
+})
+
+const voiceOrbMood = computed<'default' | 'sleepy' | 'surprised' | 'error'>(() => {
+  if (micError.value) return 'error'
+  return idleMascotMood.value
 })
 
 const WEEKDAY_LABELS = ['일', '월', '화', '수', '목', '금', '토']
@@ -42,15 +51,17 @@ const todayLabel = computed(
 
 const greetingLabel = computed(() => {
   const hour = today.getHours()
-  if (hour >= 5 && hour < 11) return '좋은 아침이에요'
-  if (hour >= 11 && hour < 14) return '점심 맛있게 드셨나요'
-  if (hour >= 14 && hour < 18) return '좋은 오후예요'
-  if (hour >= 18 && hour < 22) return '좋은 저녁이에요'
-  return '늦은 밤이에요'
+  if (hour >= 5 && hour < 11) return '상쾌한 아침이에요'
+  if (hour >= 11 && hour < 14) return '든든한 점심시간이에요'
+  if (hour >= 14 && hour < 18) return '편안한 오후예요'
+  if (hour >= 18 && hour < 22) return '차분한 저녁이에요'
+  return '편히 쉬실 시간이에요'
 })
 
 async function handleVoiceStart() {
   if (isProcessing.value) return
+  clearIdleMascotTimers()
+  idleMascotMood.value = 'default'
 
   if (isListening.value) {
     await stopRecordingAndTranscribe()
@@ -98,6 +109,8 @@ async function startRecording() {
 }
 
 function handleOrbPermissionDenied() {
+  clearIdleMascotTimers()
+  idleMascotMood.value = 'default'
   micError.value = '마이크 권한이 꺼져 있어요. 브라우저 주소창의 마이크 아이콘에서 허용해 주세요.'
 }
 
@@ -130,7 +143,35 @@ async function stopRecordingAndTranscribe() {
     micError.value = '음성을 분석하지 못했어요. 다시 눌러서 말씀해 주세요.'
   } finally {
     isProcessing.value = false
+    if (!micError.value) scheduleIdleMascot()
   }
+}
+
+function clearIdleMascotTimers() {
+  if (idleTimer) window.clearTimeout(idleTimer)
+  if (sleepyTimer) window.clearTimeout(sleepyTimer)
+  if (surprisedTimer) window.clearTimeout(surprisedTimer)
+  idleTimer = undefined
+  sleepyTimer = undefined
+  surprisedTimer = undefined
+}
+
+function scheduleIdleMascot() {
+  clearIdleMascotTimers()
+  if (isListening.value || isProcessing.value || micError.value) return
+
+  idleTimer = window.setTimeout(() => {
+    idleMascotMood.value = 'sleepy'
+
+    sleepyTimer = window.setTimeout(() => {
+      idleMascotMood.value = 'surprised'
+
+      surprisedTimer = window.setTimeout(() => {
+        idleMascotMood.value = 'default'
+        scheduleIdleMascot()
+      }, 700)
+    }, 2600)
+  }, 10000)
 }
 
 function mapGetUserMediaError(error: unknown): string {
@@ -162,15 +203,22 @@ function closeAudioGraph() {
 }
 
 function goTextInput() {
+  clearIdleMascotTimers()
   consultationFlow.reset()
   void router.push(routePaths.input)
 }
 
 function goFraudWarning() {
+  clearIdleMascotTimers()
   void router.push(routePaths.fraudWarning)
 }
 
-onBeforeUnmount(closeAudioGraph)
+onMounted(scheduleIdleMascot)
+
+onBeforeUnmount(() => {
+  clearIdleMascotTimers()
+  closeAudioGraph()
+})
 </script>
 
 <template>
@@ -187,7 +235,7 @@ onBeforeUnmount(closeAudioGraph)
           ></span>
           <div class="home__brand-copy">
             <h1 class="home__brand-name">어부바</h1>
-            <p class="home__brand-tagline">은행 일, 어부바가 함께해요</p>
+            <p class="home__brand-tagline">어르신 부담 바로덜기</p>
           </div>
         </div>
       </header>
@@ -195,7 +243,7 @@ onBeforeUnmount(closeAudioGraph)
       <section class="home__greeting" aria-label="오늘의 인사">
         <p class="home__greeting-date">{{ todayLabel }}</p>
         <p class="home__greeting-message">{{ greetingLabel }}</p>
-        <p class="home__greeting-tagline">오늘도 어부바가 함께할게요</p>
+        <p class="home__greeting-tagline">필요한 은행 일, 어부바가 도와드릴게요</p>
       </section>
 
       <section class="home__hero" aria-label="음성으로 말씀해 주세요">
@@ -206,19 +254,22 @@ onBeforeUnmount(closeAudioGraph)
                 ? '잠시만 기다려주세요'
                 : isListening
                   ? '끝나면 다시 눌러주세요'
-                  : '마이크를 누르고 편하게 말씀하세요'
+                  : '저를 눌러서 말씀하세요!'
             }}
           </p>
         </div>
 
         <VoiceOrb
           :state="voiceOrbState"
+          :mood="voiceOrbMood"
           :media-stream="voiceMediaStream"
           @toggle="handleVoiceStart"
           @permission-denied="handleOrbPermissionDenied"
         />
 
-        <small v-if="micError" class="home__hero-error">{{ micError }}</small>
+        <small class="home__hero-error" :class="{ 'home__hero-error--visible': micError }">
+          {{ micError || '음성 안내 상태' }}
+        </small>
         <div class="home__hero-bottom" aria-hidden="true"></div>
       </section>
 
@@ -379,9 +430,20 @@ onBeforeUnmount(closeAudioGraph)
 }
 
 .home__hero-error {
+  min-height: 20px;
   color: var(--color-accent-deep);
   font-size: var(--text-sm);
   font-weight: 700;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.2s ease,
+    visibility 0.2s ease;
+}
+
+.home__hero-error--visible {
+  opacity: 1;
+  visibility: visible;
 }
 
 .quick-actions {
