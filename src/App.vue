@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { RouterView, useRoute } from 'vue-router'
+import AppErrorBoundary from '@/components/common/AppErrorBoundary.vue'
 import { skipNextPageTransition } from '@/utils/pageTransition'
 
 const SLIDE_DURATION = '200ms'
@@ -41,20 +42,26 @@ watch(
 </script>
 
 <template>
-  <div
-    class="page-transition-root"
-    :style="{
-      '--page-duration': duration,
-      '--page-enter-shift': enterShift,
-      '--page-leave-shift': leaveShift,
-    }"
-  >
-    <RouterView v-slot="{ Component, route }">
-      <Transition name="page" mode="out-in">
-        <component :is="Component" :key="route.fullPath" />
-      </Transition>
-    </RouterView>
-  </div>
+  <AppErrorBoundary>
+    <div
+      class="page-transition-root"
+      :style="{
+        '--page-duration': duration,
+        '--page-enter-shift': enterShift,
+        '--page-leave-shift': leaveShift,
+      }"
+    >
+      <RouterView v-slot="{ Component, route }">
+        <!-- deliberately not mode="out-in": that makes the incoming page wait for the
+             outgoing one's leave to finish, so a leave that never completes leaves the
+             app on a blank screen. Overlapping instead, with the leaving page taken out
+             of flow below, means the next page always renders. -->
+        <Transition name="page">
+          <component :is="Component" :key="route.fullPath" />
+        </Transition>
+      </RouterView>
+    </div>
+  </AppErrorBoundary>
 </template>
 
 <style>
@@ -68,6 +75,14 @@ watch(
   transition:
     opacity var(--page-duration) ease,
     transform var(--page-duration) ease;
+}
+
+/* the two pages overlap during the transition, so the outgoing one leaves the flow
+   and the incoming one keeps its normal position instead of being pushed down */
+.page-leave-active {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
 }
 
 .page-enter-from {

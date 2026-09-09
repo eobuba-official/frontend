@@ -7,6 +7,7 @@ import type {
   ChecklistAnswerResult,
   ChecklistQuestionsResult,
   ConsultationHistoryResult,
+  CorrectionConfirmationRequest,
   NearbyBranchQuery,
   NearbyBranchResult,
   ResolvedChecklistResult,
@@ -20,6 +21,19 @@ import { apiClient } from '@/api/client'
 export const consultationService = {
   async analyze(request: AnalyzeRequest): Promise<AnalyzeResult> {
     const response = await apiClient.post<AnalyzeResult>('/analyze', request)
+    return response.data
+  },
+
+  // re-analyzes the same consultation with the sentence the user confirmed, so the
+  // response carries a fresh status to route on
+  async confirmCorrection(
+    consultationId: string,
+    request: CorrectionConfirmationRequest,
+  ): Promise<AnalyzeResult> {
+    const response = await apiClient.post<AnalyzeResult>(
+      `/consultations/${consultationId}/correction-confirmation`,
+      request,
+    )
     return response.data
   },
 

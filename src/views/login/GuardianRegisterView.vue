@@ -146,27 +146,30 @@ async function confirmRegister() {
         {{ isSubmitting ? '시작하는 중...' : '어부바 시작하기' }}
       </BaseButton>
     </template>
+
+    <!-- kept inside AppScreen so this view has a single root element: a second root
+         makes <Transition> unable to animate the view, which stranded the route
+         transition and left the next screen blank -->
+    <ConfirmModal
+      v-if="isConfirmOpen"
+      role="alertdialog"
+      title="가족 정보를 확인해 주세요"
+      :description="confirmDescription"
+      @close="closeConfirm"
+    >
+      <p class="modal-guide">번호가 틀리면 안내 문자가 다른 사람에게 갈 수 있어요.</p>
+      <p v-if="errorMessage" class="guardian__error">{{ errorMessage }}</p>
+
+      <template #actions>
+        <BaseButton variant="ghost" block :disabled="isSubmitting" @click="closeConfirm">
+          다시 수정
+        </BaseButton>
+        <BaseButton block :disabled="isSubmitting" @click="confirmRegister">
+          {{ isSubmitting ? '시작하는 중...' : '맞아요' }}
+        </BaseButton>
+      </template>
+    </ConfirmModal>
   </AppScreen>
-
-  <ConfirmModal
-    v-if="isConfirmOpen"
-    role="alertdialog"
-    title="가족 정보를 확인해 주세요"
-    :description="confirmDescription"
-    @close="closeConfirm"
-  >
-    <p class="modal-guide">번호가 틀리면 안내 문자가 다른 사람에게 갈 수 있어요.</p>
-    <p v-if="errorMessage" class="guardian__error">{{ errorMessage }}</p>
-
-    <template #actions>
-      <BaseButton variant="ghost" block :disabled="isSubmitting" @click="closeConfirm">
-        다시 수정
-      </BaseButton>
-      <BaseButton block :disabled="isSubmitting" @click="confirmRegister">
-        {{ isSubmitting ? '시작하는 중...' : '맞아요' }}
-      </BaseButton>
-    </template>
-  </ConfirmModal>
 </template>
 
 <style scoped>

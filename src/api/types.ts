@@ -137,6 +137,13 @@ export interface AnalyzeRequest {
   sttConfidence?: number | null
 }
 
+export interface CorrectionConfirmationRequest {
+  // the Gemini-corrected sentence the user approved, or their own edit of it
+  confirmedUtterance: string
+  // omit to let the backend re-classify the confirmed sentence
+  taskTypeCode?: string
+}
+
 export interface AnalyzeResult {
   consultationId: string
   status: ConsultationStatus
