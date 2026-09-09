@@ -54,12 +54,14 @@ export interface User {
 }
 
 export type GuardianRelation = '아들' | '딸' | '배우자' | '기타'
+export type GuardianStatus = 'ACTIVE' | 'DECLINED'
 
 export interface Guardian {
   guardianId?: number
   name: string
   phoneNumber: string
   relation: GuardianRelation
+  status?: GuardianStatus
 }
 
 export interface SmsRequest {
@@ -106,6 +108,22 @@ export interface GuardianAddRequest {
 export interface GuardianAddResult {
   guardian: Guardian
   guardianCount: number
+  mockNotification: string | null
+}
+
+export interface GuardianDeclineInfoResult {
+  userName: string
+  guardianName: string
+  relation: string
+  status: GuardianStatus
+}
+
+export interface GuardianDeclineRequest {
+  token: string
+}
+
+export interface GuardianDeclineResult {
+  status: GuardianStatus
 }
 
 export interface GuardianDeleteResult {

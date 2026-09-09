@@ -27,6 +27,20 @@ describe('router auth guard (integration)', () => {
     expect(router.currentRoute.value.path).toBe(routePaths.checklist)
   })
 
+  it('lets an unauthenticated visitor reach the guardian decline route', async () => {
+    await router.push({ path: routePaths.guardianDecline, query: { token: 'decline-token' } })
+
+    expect(router.currentRoute.value.path).toBe(routePaths.guardianDecline)
+  })
+
+  it('lets an authenticated visitor reach the guardian decline route', async () => {
+    setAccessToken('mock-access-token')
+
+    await router.push({ path: routePaths.guardianDecline, query: { token: 'decline-token' } })
+
+    expect(router.currentRoute.value.path).toBe(routePaths.guardianDecline)
+  })
+
   it('redirects an already-authenticated user away from the login screen', async () => {
     setAccessToken('mock-access-token')
     await router.push(routePaths.checklist)

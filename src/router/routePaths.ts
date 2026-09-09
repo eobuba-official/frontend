@@ -2,6 +2,7 @@ export const routePaths = {
   login: '/login',
   smsVerify: '/login/verify',
   guardianRegister: '/login/guardian',
+  guardianDecline: '/guardian-decline',
   home: '/',
   input: '/input',
   utteranceConfirm: '/utterance/confirm',

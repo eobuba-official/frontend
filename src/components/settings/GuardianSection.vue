@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { Plus, Trash2, User } from '@lucide/vue'
+import { MessageSquareText, Plus, Trash2, User } from '@lucide/vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import ConfirmModal from '@/components/common/ConfirmModal.vue'
 import PhoneNumberField from '@/components/common/PhoneNumberField.vue'
@@ -19,9 +19,17 @@ const newGuardianPhoneDigits = ref('')
 const newGuardianRelation = ref<GuardianRelation>('아들')
 const isAddingGuardian = ref(false)
 const addGuardianError = ref('')
+const isAddConfirmationOpen = ref(false)
+const mockNotification = ref<string | null>(null)
 
 const canAddGuardian = computed(
   () => newGuardianName.value.trim().length > 0 && newGuardianPhoneDigits.value.length === 8 && !isAddingGuardian.value,
+)
+
+const formattedNewGuardianPhone = computed(() => formatPhone(`010${newGuardianPhoneDigits.value}`))
+const addConfirmationDescription = computed(
+  () =>
+    `${formattedNewGuardianPhone.value}, ${newGuardianRelation.value} ${newGuardianName.value.trim()}님이 맞나요?`,
 )
 
 const pendingDeleteGuardian = ref<Guardian | null>(null)
@@ -55,7 +63,23 @@ function closeAddGuardian() {
   isAddGuardianOpen.value = false
 }
 
-async function submitAddGuardian() {
+function submitAddGuardian() {
+  if (!canAddGuardian.value) return
+  isAddGuardianOpen.value = false
+  isAddConfirmationOpen.value = true
+}
+
+function cancelAddConfirmation() {
+  if (isAddingGuardian.value) return
+  isAddConfirmationOpen.value = false
+  isAddGuardianOpen.value = true
+}
+
+function closeNotificationModal() {
+  mockNotification.value = null
+}
+
+async function confirmAddGuardian() {
   if (!canAddGuardian.value) return
 
   isAddingGuardian.value = true
@@ -68,7 +92,11 @@ async function submitAddGuardian() {
       relation: newGuardianRelation.value,
     })
     guardians.value = [...guardians.value, result.guardian]
-    isAddGuardianOpen.value = false
+    isAddConfirmationOpen.value = false
+    mockNotification.value = result.mockNotification
+    newGuardianName.value = ''
+    newGuardianPhoneDigits.value = ''
+    newGuardianRelation.value = '아들'
   } catch (error) {
     addGuardianError.value = error instanceof Error ? error.message : '가족을 추가하지 못했어요. 다시 시도해 주세요.'
   } finally {
@@ -123,8 +151,14 @@ async function confirmDeleteGuardian() {
               <strong>
                 {{ guardian.name }}
                 <span class="guardian-relation-badge">{{ guardian.relation }}</span>
+                <span v-if="guardian.status === 'DECLINED'" class="guardian-status-badge">
+                  수신 거부
+                </span>
               </strong>
               <small>{{ formatPhone(guardian.phoneNumber) }}</small>
+              <small v-if="guardian.status === 'DECLINED'" class="guardian-status-text">
+                알림 수신을 거부했어요
+              </small>
             </span>
             <button
               class="settings-row__delete"
@@ -188,6 +222,45 @@ async function confirmDeleteGuardian() {
       <BaseButton block :disabled="!canAddGuardian" @click="submitAddGuardian">
         {{ isAddingGuardian ? '추가하는 중...' : '추가하기' }}
       </BaseButton>
+    </template>
+  </ConfirmModal>
+
+  <ConfirmModal
+    v-if="isAddConfirmationOpen"
+    role="alertdialog"
+    title="가족 정보를 확인해 주세요"
+    :description="addConfirmationDescription"
+    @close="cancelAddConfirmation"
+  >
+    <p class="modal-guide">번호가 틀리면 안내 문자가 다른 사람에게 갈 수 있어요.</p>
+    <p v-if="addGuardianError" class="modal-error">{{ addGuardianError }}</p>
+
+    <template #actions>
+      <BaseButton variant="ghost" block :disabled="isAddingGuardian" @click="cancelAddConfirmation">
+        다시 수정
+      </BaseButton>
+      <BaseButton block :disabled="isAddingGuardian" @click="confirmAddGuardian">
+        {{ isAddingGuardian ? '추가하는 중...' : '맞아요' }}
+      </BaseButton>
+    </template>
+  </ConfirmModal>
+
+  <ConfirmModal
+    v-if="mockNotification"
+    title="안내 문자가 준비됐어요"
+    description="시연용으로 실제 발송될 안내 문자 내용을 보여드려요."
+    single-action
+    @close="closeNotificationModal"
+  >
+    <div class="mock-notification">
+      <span class="mock-notification__icon" aria-hidden="true">
+        <MessageSquareText :size="20" :stroke-width="2.2" />
+      </span>
+      <p>{{ mockNotification }}</p>
+    </div>
+
+    <template #actions>
+      <BaseButton block @click="closeNotificationModal">확인했어요</BaseButton>
     </template>
   </ConfirmModal>
 
@@ -307,6 +380,20 @@ async function confirmDeleteGuardian() {
   font-weight: 700;
 }
 
+.guardian-status-badge {
+  margin-left: var(--space-1);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--color-alert-bg);
+  color: var(--color-alert);
+  font-size: var(--text-xs);
+  font-weight: 800;
+}
+
+.guardian-status-text {
+  color: var(--color-alert);
+}
+
 .settings-row__delete {
   display: grid;
   flex-shrink: 0;
@@ -417,5 +504,44 @@ async function confirmDeleteGuardian() {
   margin-top: var(--space-3);
   color: var(--color-alert);
   font-size: var(--text-sm);
+}
+
+.modal-guide {
+  margin-top: var(--space-3);
+  color: var(--color-ink-soft);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+.mock-notification {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+  padding: var(--space-4);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-alt);
+  text-align: left;
+}
+
+.mock-notification__icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-pill);
+  background: var(--color-yellow-light);
+  color: var(--color-accent-deep);
+}
+
+.mock-notification p {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 </style>

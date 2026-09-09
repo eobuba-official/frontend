@@ -1,18 +1,21 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import MockAdapter from 'axios-mock-adapter'
-import { apiClient, clearAccessToken, getAccessToken } from '@/api/client'
+import { apiClient, clearAccessToken, getAccessToken, publicApiClient } from '@/api/client'
 import { authService } from '../authService'
 
 describe('authService (integration: client interceptors + service)', () => {
   const mock = new MockAdapter(apiClient)
+  const publicMock = new MockAdapter(publicApiClient)
 
   beforeEach(() => {
     mock.reset()
+    publicMock.reset()
     clearAccessToken()
   })
 
   afterEach(() => {
     mock.reset()
+    publicMock.reset()
     clearAccessToken()
   })
 
@@ -99,8 +102,9 @@ describe('authService (integration: client interceptors + service)', () => {
     mock.onPost('/users/me/guardians').reply(200, {
       success: true,
       data: {
-        guardian: { guardianId: 2, name: '김철수', phoneNumber: '01098765432', relation: '아들' },
+        guardian: { guardianId: 2, name: '김철수', phoneNumber: '01098765432', relation: '아들', status: 'ACTIVE' },
         guardianCount: 2,
+        mockNotification: '[어부바] 등록 안내',
       },
       error: null,
     })
@@ -112,7 +116,40 @@ describe('authService (integration: client interceptors + service)', () => {
     })
 
     expect(result.guardian.guardianId).toBe(2)
+    expect(result.guardian.status).toBe('ACTIVE')
     expect(result.guardianCount).toBe(2)
+    expect(result.mockNotification).toBe('[어부바] 등록 안내')
+  })
+
+  it('getGuardianDeclineInfo returns public decline page information', async () => {
+    publicMock.onGet('/guardians/decline-info', { params: { token: 'decline-token' } }).reply(200, {
+      success: true,
+      data: { userName: '김순자', guardianName: '김철수', relation: '아들', status: 'ACTIVE' },
+      error: null,
+    })
+
+    const result = await authService.getGuardianDeclineInfo('decline-token')
+
+    expect(result.userName).toBe('김순자')
+    expect(result.status).toBe('ACTIVE')
+  })
+
+  it('declineGuardian posts the public token and returns the declined status', async () => {
+    publicMock.onPost('/guardians/decline').reply((config) => {
+      expect(JSON.parse(config.data)).toEqual({ token: 'decline-token' })
+      return [
+        200,
+        {
+          success: true,
+          data: { status: 'DECLINED' },
+          error: null,
+        },
+      ]
+    })
+
+    const result = await authService.declineGuardian({ token: 'decline-token' })
+
+    expect(result.status).toBe('DECLINED')
   })
 
   it('deleteGuardian returns the updated count and fraud alert status', async () => {
