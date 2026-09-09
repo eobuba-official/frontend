@@ -226,7 +226,8 @@ describe('consultationFlow store', () => {
       },
       expectedWaitMinutes: 5,
       congestionSource: 'MOCK',
-      score: 90,
+      walkMinutes: 15,
+      totalMinutes: 20,
       sentence: '내일 오전 10시가 좋아요',
     }
 
