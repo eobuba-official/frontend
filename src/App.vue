@@ -3,8 +3,17 @@ import { ref, watch } from 'vue'
 import { RouterView, useRoute } from 'vue-router'
 import { skipNextPageTransition } from '@/utils/pageTransition'
 
+const SLIDE_DURATION = '200ms'
+
 const route = useRoute()
-const transitionName = ref('page-slide-forward')
+// the transition's CSS class names stay constant and only these values change —
+// swapping the Transition's `name` mid-flight left interrupted transitions with
+// stale classes and no end event, so a fast tab tap could strand the router view
+// with the outgoing page removed and the incoming one never entering
+const duration = ref(SLIDE_DURATION)
+const enterShift = ref('24px')
+const leaveShift = ref('-18px')
+
 let previousPosition = historyPosition()
 
 function historyPosition() {
@@ -17,10 +26,13 @@ watch(
     const nextPosition = historyPosition()
 
     if (skipNextPageTransition.value) {
-      transitionName.value = 'page-none'
       skipNextPageTransition.value = false
+      duration.value = '0ms'
     } else {
-      transitionName.value = nextPosition < previousPosition ? 'page-slide-back' : 'page-slide-forward'
+      const isBack = nextPosition < previousPosition
+      duration.value = SLIDE_DURATION
+      enterShift.value = isBack ? '-24px' : '24px'
+      leaveShift.value = isBack ? '18px' : '-18px'
     }
 
     previousPosition = nextPosition
@@ -29,40 +41,42 @@ watch(
 </script>
 
 <template>
-  <RouterView v-slot="{ Component, route }">
-    <Transition :name="transitionName" mode="out-in">
-      <component :is="Component" :key="route.fullPath" />
-    </Transition>
-  </RouterView>
+  <div
+    class="page-transition-root"
+    :style="{
+      '--page-duration': duration,
+      '--page-enter-shift': enterShift,
+      '--page-leave-shift': leaveShift,
+    }"
+  >
+    <RouterView v-slot="{ Component, route }">
+      <Transition name="page" mode="out-in">
+        <component :is="Component" :key="route.fullPath" />
+      </Transition>
+    </RouterView>
+  </div>
 </template>
 
 <style>
-.page-slide-forward-enter-active,
-.page-slide-forward-leave-active,
-.page-slide-back-enter-active,
-.page-slide-back-leave-active {
+/* carries the transition variables without adding a layout box of its own */
+.page-transition-root {
+  display: contents;
+}
+
+.page-enter-active,
+.page-leave-active {
   transition:
-    opacity 180ms ease,
-    transform 220ms ease;
+    opacity var(--page-duration) ease,
+    transform var(--page-duration) ease;
 }
 
-.page-slide-forward-enter-from {
+.page-enter-from {
   opacity: 0;
-  transform: translateX(24px);
+  transform: translateX(var(--page-enter-shift));
 }
 
-.page-slide-forward-leave-to {
+.page-leave-to {
   opacity: 0;
-  transform: translateX(-18px);
-}
-
-.page-slide-back-enter-from {
-  opacity: 0;
-  transform: translateX(-24px);
-}
-
-.page-slide-back-leave-to {
-  opacity: 0;
-  transform: translateX(18px);
+  transform: translateX(var(--page-leave-shift));
 }
 </style>
