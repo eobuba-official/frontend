@@ -4,7 +4,7 @@ import { BellOff, CheckCircle2, ShieldCheck, TriangleAlert } from '@lucide/vue'
 import { useRoute } from 'vue-router'
 import AppScreen from '@/components/common/AppScreen.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
-import logoMark from '@/assets/img/logo-mark.png'
+import charMascot from '@/assets/img/char.png'
 import { ApiClientError } from '@/api/client'
 import type { GuardianDeclineInfoResult } from '@/api/types'
 import { authService } from '@/services/authService'
@@ -106,7 +106,11 @@ onMounted(loadDeclineInfo)
   <AppScreen>
     <section class="decline">
       <header class="decline__brand">
-        <span class="decline__logo" :style="{ backgroundImage: `url(${logoMark})` }" aria-hidden="true"></span>
+        <span
+          class="decline__logo"
+          :style="{ backgroundImage: `url(${charMascot})` }"
+          aria-hidden="true"
+        ></span>
         <strong>어부바</strong>
       </header>
 
@@ -173,13 +177,13 @@ onMounted(loadDeclineInfo)
 }
 
 .decline__logo {
-  width: 40px;
-  height: 40px;
+  width: 56px;
+  height: 56px;
   border-radius: var(--radius-pill);
-  background-color: var(--color-yellow-light);
+  background-color: transparent;
   background-repeat: no-repeat;
   background-position: center;
-  background-size: 62% auto;
+  background-size: 100% auto;
 }
 
 .decline__icon {
