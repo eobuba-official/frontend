@@ -4,6 +4,8 @@ defineProps<{
   noTopPadding?: boolean
   /** remove all content padding, e.g. for a full-bleed map that manages its own overlays */
   noPadding?: boolean
+  /** remove the footer's CTA padding/gradient, e.g. for a full-bleed bottom tab bar */
+  flushFooter?: boolean
 }>()
 </script>
 
@@ -20,7 +22,11 @@ defineProps<{
       <slot />
     </main>
 
-    <footer v-if="$slots.footer" class="app-screen__footer">
+    <footer
+      v-if="$slots.footer"
+      class="app-screen__footer"
+      :class="{ 'app-screen__footer--flush': flushFooter }"
+    >
       <slot name="footer" />
     </footer>
   </div>
@@ -73,5 +79,10 @@ defineProps<{
   bottom: 0;
   padding: var(--cta-bar-padding-top) var(--screen-padding-x) var(--cta-bar-padding-bottom);
   background: linear-gradient(to top, var(--color-bg) 65%, transparent);
+}
+
+.app-screen__footer--flush {
+  padding: 0;
+  background: var(--color-surface);
 }
 </style>

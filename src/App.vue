@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
 import { RouterView, useRoute } from 'vue-router'
+import { skipNextPageTransition } from '@/utils/pageTransition'
 
 const route = useRoute()
 const transitionName = ref('page-slide-forward')
@@ -14,7 +15,14 @@ watch(
   () => route.fullPath,
   () => {
     const nextPosition = historyPosition()
-    transitionName.value = nextPosition < previousPosition ? 'page-slide-back' : 'page-slide-forward'
+
+    if (skipNextPageTransition.value) {
+      transitionName.value = 'page-none'
+      skipNextPageTransition.value = false
+    } else {
+      transitionName.value = nextPosition < previousPosition ? 'page-slide-back' : 'page-slide-forward'
+    }
+
     previousPosition = nextPosition
   },
 )

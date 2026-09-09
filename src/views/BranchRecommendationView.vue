@@ -9,11 +9,8 @@ import FlowHeader from '@/components/common/FlowHeader.vue'
 import { routePaths } from '@/router/routePaths'
 import { consultationService } from '@/services/consultationService'
 import { useConsultationFlowStore } from '@/stores/consultationFlow'
-import { isLocationPermissionEnabled } from '@/utils/permissionPreferences'
+import { FALLBACK_LOCATION, getCurrentLocation } from '@/utils/geolocation'
 import type { BranchRecommendation } from '@/api/types'
-
-const FALLBACK_LOCATION = { lat: 37.5665, lng: 126.978 }
-const GEOLOCATION_TIMEOUT_MS = 5000
 
 const router = useRouter()
 const consultationFlow = useConsultationFlowStore()
@@ -28,21 +25,6 @@ const isLoading = ref(true)
 const errorMessage = ref('')
 
 const selected = computed(() => recommendations.value.find((item) => item.rank === selectedRank.value) ?? null)
-
-function getCurrentLocation(): Promise<{ lat: number; lng: number }> {
-  return new Promise((resolve) => {
-    if (!navigator.geolocation || !isLocationPermissionEnabled()) {
-      resolve(FALLBACK_LOCATION)
-      return
-    }
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => resolve({ lat: position.coords.latitude, lng: position.coords.longitude }),
-      () => resolve(FALLBACK_LOCATION),
-      { timeout: GEOLOCATION_TIMEOUT_MS },
-    )
-  })
-}
 
 onMounted(async () => {
   if (!consultationFlow.consultationId || !consultationFlow.task) return

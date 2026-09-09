@@ -62,9 +62,7 @@ onMounted(async () => {
 
   try {
     const history = await consultationService.getConsultationHistory()
-    recentFraudHistory.value = history.consultations
-      .filter((item) => item.status === 'FRAUD_WARNING' || item.status === 'WARNING_DISMISSED')
-      .slice(0, 3)
+    recentFraudHistory.value = history.consultations.filter((item) => item.status === 'FRAUD_WARNING').slice(0, 3)
   } catch {
     recentFraudHistory.value = []
   }

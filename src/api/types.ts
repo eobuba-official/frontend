@@ -37,7 +37,7 @@ export type ConsultationStatus =
   | 'TASK_CONFIRMED'
   | 'CANDIDATES_SUGGESTED'
   | 'UNCLASSIFIED'
-  | 'WARNING_DISMISSED'
+  | 'CORRECTION_CONFIRMATION_REQUIRED'
 export type ClassificationStatus = 'CONFIRMED' | 'CANDIDATES' | 'UNCLASSIFIED' | 'SUSPENDED'
 export type VisitDecisionType = 'NO_VISIT' | 'CHECK_NEEDED' | 'VISIT_REQUIRED'
 export type FraudPatternType =

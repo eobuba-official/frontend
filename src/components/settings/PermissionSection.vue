@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { MapPin, Mic } from '@lucide/vue'
+import { ChevronRight, MapPin, Mic, Type } from '@lucide/vue'
+import { getTextSize, saveTextSize, textSizeOptions, type TextSize } from '@/utils/textSize'
 import BaseButton from '@/components/common/BaseButton.vue'
 import ConfirmModal from '@/components/common/ConfirmModal.vue'
 import {
@@ -17,13 +18,26 @@ const locationBlocked = ref(false)
 const voiceBlocked = ref(false)
 const pendingTurnOff = ref<'location' | 'voice' | null>(null)
 const blockedNotice = ref<'location' | 'voice' | null>(null)
+const textSize = ref(getTextSize())
+const textSizeDialog = ref<HTMLDialogElement | null>(null)
+const textSizeLabel = computed(
+  () => textSizeOptions.find((option) => option.value === textSize.value)?.label,
+)
+
+function selectTextSize(value: TextSize) {
+  textSize.value = value
+  saveTextSize(value)
+}
 
 const locationSwitchOn = computed(() => locationEnabled.value && !locationBlocked.value)
 const voiceSwitchOn = computed(() => voiceEnabled.value && !voiceBlocked.value)
 
 const turnOffModalCopy = computed(() => {
   if (pendingTurnOff.value === 'location') {
-    return { title: '위치 권한을 끌까요?', description: '가까운 지점을 찾을 때 위치를 사용하지 않아요.' }
+    return {
+      title: '위치 권한을 끌까요?',
+      description: '가까운 지점을 찾을 때 위치를 사용하지 않아요.',
+    }
   }
   if (pendingTurnOff.value === 'voice') {
     return { title: '음성 권한을 끌까요?', description: '말로 요청하는 기능을 사용할 수 없어요.' }
@@ -33,10 +47,16 @@ const turnOffModalCopy = computed(() => {
 
 const blockedNoticeCopy = computed(() => {
   if (blockedNotice.value === 'location') {
-    return { title: '위치 권한이 차단돼 있어요', description: '브라우저 설정에서 이 사이트의 위치 접근을 허용해야 사용할 수 있어요.' }
+    return {
+      title: '위치 권한이 차단돼 있어요',
+      description: '브라우저 설정에서 이 사이트의 위치 접근을 허용해야 사용할 수 있어요.',
+    }
   }
   if (blockedNotice.value === 'voice') {
-    return { title: '음성 권한이 차단돼 있어요', description: '브라우저 설정에서 이 사이트의 마이크 접근을 허용해야 사용할 수 있어요.' }
+    return {
+      title: '음성 권한이 차단돼 있어요',
+      description: '브라우저 설정에서 이 사이트의 마이크 접근을 허용해야 사용할 수 있어요.',
+    }
   }
   return null
 })
@@ -98,8 +118,24 @@ function closeBlockedNotice() {
 
 <template>
   <div class="settings-group">
-    <p class="settings-group__label">권한 설정</p>
+    <h2 class="settings-group__label">앱 설정</h2>
     <div class="settings-card">
+      <button
+        class="settings-row"
+        type="button"
+        aria-haspopup="dialog"
+        @click="textSizeDialog?.showModal()"
+      >
+        <span class="settings-row__icon" aria-hidden="true"
+          ><Type :size="20" :stroke-width="2.2"
+        /></span>
+        <span class="settings-row__copy"
+          ><strong>글자 크기</strong><small>읽기 편한 크기로 바꿔요</small></span
+        >
+        <span class="settings-row__value">{{ textSizeLabel }}</span>
+        <ChevronRight class="settings-row__chevron" :size="20" aria-hidden="true" />
+      </button>
+      <div class="settings-row-divider" aria-hidden="true"></div>
       <button
         class="settings-row"
         type="button"
@@ -112,7 +148,9 @@ function closeBlockedNotice() {
         </span>
         <span class="settings-row__copy">
           <strong>위치 권한</strong>
-          <small>{{ locationBlocked ? '브라우저에서 차단돼 있어요' : '가까운 지점을 찾을 때 사용해요' }}</small>
+          <small>{{
+            locationBlocked ? '브라우저에서 차단돼 있어요' : '가까운 지점을 찾을 때 사용해요'
+          }}</small>
         </span>
         <span class="switch" :class="{ 'switch--on': locationSwitchOn }" aria-hidden="true">
           <span class="switch__thumb"></span>
@@ -133,7 +171,9 @@ function closeBlockedNotice() {
         </span>
         <span class="settings-row__copy">
           <strong>음성 권한</strong>
-          <small>{{ voiceBlocked ? '브라우저에서 차단돼 있어요' : '말로 요청할 때 사용해요' }}</small>
+          <small>{{
+            voiceBlocked ? '브라우저에서 차단돼 있어요' : '말로 요청할 때 사용해요'
+          }}</small>
         </span>
         <span class="switch" :class="{ 'switch--on': voiceSwitchOn }" aria-hidden="true">
           <span class="switch__thumb"></span>
@@ -141,6 +181,26 @@ function closeBlockedNotice() {
       </button>
     </div>
   </div>
+
+  <dialog ref="textSizeDialog" class="text-size-dialog" aria-labelledby="text-size-title">
+    <h2 id="text-size-title">글자 크기</h2>
+    <p>읽기 편한 크기를 선택해주세요.</p>
+    <fieldset class="text-size-options">
+      <legend class="text-size-legend">글자 크기 선택</legend>
+      <label v-for="option in textSizeOptions" :key="option.value" class="text-size-option">
+        <input
+          type="radio"
+          name="text-size"
+          :value="option.value"
+          :checked="textSize === option.value"
+          @change="selectTextSize(option.value)"
+        />
+        <span>{{ option.label }}</span>
+      </label>
+    </fieldset>
+    <p class="text-size-preview">어부바와 함께 편안하게 이용해요.</p>
+    <BaseButton block @click="textSizeDialog?.close()">완료</BaseButton>
+  </dialog>
 
   <ConfirmModal
     v-if="turnOffModalCopy"
@@ -179,7 +239,7 @@ function closeBlockedNotice() {
 .settings-group__label {
   padding-left: var(--space-1);
   color: var(--color-ink-soft);
-  font-size: var(--text-sm);
+  font-size: var(--text-base);
   font-weight: 700;
 }
 
@@ -189,7 +249,6 @@ function closeBlockedNotice() {
   border: 1px solid var(--color-line);
   border-radius: var(--radius-lg);
   background: var(--color-surface);
-  box-shadow: var(--shadow-card);
   overflow: hidden;
 }
 
@@ -198,6 +257,7 @@ function closeBlockedNotice() {
   align-items: center;
   gap: var(--space-3);
   width: 100%;
+  min-height: 64px;
   padding: var(--space-4);
   border: 0;
   background: transparent;
@@ -271,5 +331,72 @@ function closeBlockedNotice() {
 
 .switch--on .switch__thumb {
   transform: translateX(22px);
+}
+
+.settings-row__value {
+  color: var(--color-ink-soft);
+  font-weight: 700;
+}
+.settings-row__chevron {
+  flex-shrink: 0;
+}
+.text-size-dialog {
+  width: calc(100% - 32px);
+  max-width: 360px;
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  padding: var(--space-5);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  color: var(--color-ink);
+}
+.text-size-dialog::backdrop {
+  background: rgba(31, 35, 41, 0.4);
+}
+.text-size-dialog h2 {
+  font-size: var(--text-xl);
+}
+.text-size-dialog > p {
+  margin-block: var(--space-3);
+}
+.text-size-options {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.text-size-legend {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.text-size-option {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 56px;
+  padding: var(--space-3);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: var(--text-lg);
+  font-weight: 700;
+}
+.text-size-option:has(input:checked) {
+  background: var(--color-yellow-faint);
+  border-color: var(--color-accent);
+}
+.text-size-option input {
+  width: 24px;
+  height: 24px;
+  accent-color: var(--color-ink);
+  flex-shrink: 0;
+}
+.text-size-preview {
+  color: var(--color-ink-soft);
 }
 </style>

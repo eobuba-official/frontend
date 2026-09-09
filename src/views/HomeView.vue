@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { Keyboard, Settings, ShieldAlert } from '@lucide/vue'
+import { Keyboard, ShieldAlert } from '@lucide/vue'
 import { useRouter } from 'vue-router'
 import AppScreen from '@/components/common/AppScreen.vue'
+import BottomTabBar from '@/components/common/BottomTabBar.vue'
 import logoMark from '@/assets/img/logo-mark.png'
+import charMascot from '@/assets/img/char.png'
 import { routePaths } from '@/router/routePaths'
 import { speechAnalysisService } from '@/services/speechAnalysisService'
 import { useConsultationFlowStore } from '@/stores/consultationFlow'
@@ -29,6 +31,23 @@ const voiceOrbState = computed<'idle' | 'listening' | 'thinking'>(() => {
   if (isProcessing.value) return 'thinking'
   if (isListening.value) return 'listening'
   return 'idle'
+})
+
+const WEEKDAY_LABELS = ['일', '월', '화', '수', '목', '금', '토']
+
+const today = new Date()
+
+const todayLabel = computed(
+  () => `${today.getMonth() + 1}월 ${today.getDate()}일 ${WEEKDAY_LABELS[today.getDay()]}요일`,
+)
+
+const greetingLabel = computed(() => {
+  const hour = today.getHours()
+  if (hour >= 5 && hour < 11) return '좋은 아침이에요 🌞'
+  if (hour >= 11 && hour < 14) return '점심 맛있게 드셨나요 🍚'
+  if (hour >= 14 && hour < 18) return '좋은 오후예요 😊'
+  if (hour >= 18 && hour < 22) return '좋은 저녁이에요 🌆'
+  return '늦은 밤이에요 😊'
 })
 
 async function handleVoiceStart() {
@@ -147,10 +166,6 @@ function goFraudWarning() {
   void router.push(routePaths.fraudWarning)
 }
 
-function goSettings() {
-  void router.push(routePaths.settings)
-}
-
 onMounted(() => {
   consultationFlow.reset()
 })
@@ -159,7 +174,7 @@ onBeforeUnmount(closeAudioGraph)
 </script>
 
 <template>
-  <AppScreen no-top-padding>
+  <AppScreen no-top-padding flush-footer>
     <div class="home" :class="{ 'home--listening': isListening }">
       <div v-if="isListening" class="home__listening-overlay" aria-hidden="true"></div>
 
@@ -175,33 +190,30 @@ onBeforeUnmount(closeAudioGraph)
             <p class="home__brand-tagline">은행 업무를 도와드려요</p>
           </div>
         </div>
-
-        <button class="home__settings-button" type="button" aria-label="설정" @click="goSettings">
-          <Settings :size="20" :stroke-width="2.4" />
-        </button>
       </header>
 
-      <section class="home__hero" aria-labelledby="home-title">
-        <div class="home__copy">
-          <h2 id="home-title">
-            {{
-              isProcessing
-                ? '확인하고 있어요...'
-                : isListening
-                  ? '듣고 있어요...'
-                  : '무엇을 도와드릴까요?'
-            }}
-          </h2>
-          <p>
+      <section class="home__greeting" aria-label="오늘의 인사">
+        <p class="home__greeting-date">{{ todayLabel }}</p>
+        <p class="home__greeting-message">{{ greetingLabel }}</p>
+        <p class="home__greeting-tagline">오늘도 어부바가 함께할게요</p>
+        <span
+          class="home__greeting-mascot"
+          :style="{ backgroundImage: `url(${charMascot})` }"
+          aria-hidden="true"
+        ></span>
+      </section>
+
+      <section class="home__hero" aria-label="음성으로 말씀해 주세요">
+        <div class="home__hero-top">
+          <p class="home__hero-caption">
             {{
               isProcessing
                 ? '잠시만 기다려주세요'
                 : isListening
-                  ? '끝나면 동그라미를 다시 눌러주세요'
-                  : '동그라미를 누르고 편하게 말씀하세요'
+                  ? '끝나면 다시 눌러주세요'
+                  : '마이크를 누르고 편하게 말씀하세요'
             }}
           </p>
-          <small v-if="micError">{{ micError }}</small>
         </div>
 
         <VoiceOrb
@@ -210,6 +222,9 @@ onBeforeUnmount(closeAudioGraph)
           @toggle="handleVoiceStart"
           @permission-denied="handleOrbPermissionDenied"
         />
+
+        <small v-if="micError" class="home__hero-error">{{ micError }}</small>
+        <div class="home__hero-bottom" aria-hidden="true"></div>
       </section>
 
       <section class="quick-actions" aria-label="빠른 실행">
@@ -218,7 +233,6 @@ onBeforeUnmount(closeAudioGraph)
             <Keyboard :size="34" :stroke-width="2.2" />
           </span>
           <strong>글자로 알려주기</strong>
-          <span>말로 하기 어려우실 때</span>
         </button>
 
         <button class="quick-card" type="button" @click="goFraudWarning">
@@ -226,10 +240,13 @@ onBeforeUnmount(closeAudioGraph)
             <ShieldAlert :size="38" :stroke-width="2.2" />
           </span>
           <strong>보이스피싱 예방</strong>
-          <span>수상한 전화 확인하기</span>
         </button>
       </section>
     </div>
+
+    <template #footer>
+      <BottomTabBar />
+    </template>
   </AppScreen>
 </template>
 
@@ -239,8 +256,9 @@ onBeforeUnmount(closeAudioGraph)
   display: flex;
   flex: 1;
   flex-direction: column;
+  gap: var(--space-5);
   background: var(--color-bg);
-  padding: var(--space-5) 0 var(--space-7);
+  padding: var(--space-5) 0 0;
 }
 
 .home__listening-overlay {
@@ -295,56 +313,80 @@ onBeforeUnmount(closeAudioGraph)
   font-weight: 600;
 }
 
-.home__settings-button {
-  display: grid;
-  flex-shrink: 0;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  border: 0;
-  border-radius: var(--radius-pill);
-  background: transparent;
-  color: var(--color-ink);
-  cursor: pointer;
+.home__greeting {
+  position: relative;
+  overflow: hidden;
+  padding: var(--space-5);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, var(--color-yellow-light), var(--color-yellow-faint));
 }
 
-.home__settings-button:hover {
-  background: var(--color-surface-alt);
+.home__greeting-date {
+  color: var(--color-accent-deep);
+  font-size: var(--text-base);
+  font-weight: 700;
+}
+
+.home__greeting-message {
+  margin-top: var(--space-1);
+  max-width: 70%;
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: var(--text-2xl);
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+.home__greeting-tagline {
+  margin-top: var(--space-1);
+  color: var(--color-ink-soft);
+  font-size: var(--text-base);
+  font-weight: 600;
+}
+
+.home__greeting-mascot {
+  position: absolute;
+  top: 50%;
+  right: var(--space-4);
+  width: 72px;
+  height: 72px;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  transform: translateY(-50%);
 }
 
 .home__hero {
+  position: relative;
+  z-index: 2;
   display: flex;
   flex: 1;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: var(--space-1);
+  gap: var(--space-3);
   padding-block: var(--space-2);
   text-align: center;
 }
 
-.home__copy {
-  position: relative;
-  z-index: 2;
+.home__hero-top {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
 }
 
-.home__copy h2 {
-  font-family: var(--font-body);
-  font-size: var(--text-hero);
-  font-weight: 800;
-  line-height: 1.18;
+.home__hero-bottom {
+  flex: 1;
 }
 
-.home__copy p {
+.home__hero-caption {
   color: var(--color-ink-soft);
-  font-size: var(--text-xl);
+  font-size: var(--text-2xl);
   font-weight: 600;
 }
 
-.home__copy small {
+.home__hero-error {
   color: var(--color-accent-deep);
   font-size: var(--text-sm);
   font-weight: 700;
@@ -361,8 +403,8 @@ onBeforeUnmount(closeAudioGraph)
   flex-direction: column;
   align-items: center;
   gap: var(--space-2);
-  min-height: 174px;
-  padding: var(--space-6) var(--space-3);
+  min-height: 158px;
+  padding: var(--space-5) var(--space-3);
   border: 1px solid var(--color-line);
   border-radius: var(--radius-lg);
   background: var(--color-surface-raised);
@@ -374,9 +416,9 @@ onBeforeUnmount(closeAudioGraph)
 .quick-card__icon {
   display: grid;
   place-items: center;
-  width: 66px;
-  height: 66px;
-  border-radius: 28px;
+  width: 58px;
+  height: 58px;
+  border-radius: 24px;
   margin-bottom: var(--space-3);
 }
 
@@ -398,7 +440,7 @@ onBeforeUnmount(closeAudioGraph)
 }
 
 .quick-card strong {
-  font-size: var(--text-xl);
+  font-size: var(--text-lg);
   font-weight: 800;
   line-height: 1.25;
   text-align: center;
@@ -416,12 +458,12 @@ onBeforeUnmount(closeAudioGraph)
     font-size: var(--text-sm);
   }
 
-  .home__copy h2 {
-    font-size: 2rem;
+  .home__greeting-message {
+    font-size: var(--text-xl);
   }
 
-  .home__copy p {
-    font-size: var(--text-lg);
+  .home__hero-caption {
+    font-size: var(--text-xl);
   }
 
   .quick-actions {
@@ -429,7 +471,7 @@ onBeforeUnmount(closeAudioGraph)
   }
 
   .quick-card {
-    min-height: 156px;
+    min-height: 140px;
     padding-inline: var(--space-2);
   }
 

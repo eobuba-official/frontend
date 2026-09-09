@@ -5,6 +5,9 @@ import './assets/styles/base.css'
 
 import App from './App.vue'
 import router from './router'
+import { applyTextSize, getTextSize } from './utils/textSize'
+
+applyTextSize(getTextSize())
 
 const app = createApp(App)
 

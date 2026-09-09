@@ -1,0 +1,392 @@
+<script setup lang="ts">
+import { computed, onMounted, ref, watch } from 'vue'
+import { Clock, Phone, X } from '@lucide/vue'
+import AppScreen from '@/components/common/AppScreen.vue'
+import BottomTabBar from '@/components/common/BottomTabBar.vue'
+import MapLoadingOverlay from '@/components/common/MapLoadingOverlay.vue'
+import MapLocateButton from '@/components/common/MapLocateButton.vue'
+import kbLogo from '@/assets/img/kb.png'
+import { useBranchSheet } from '@/composables/useBranchSheet'
+import { buildMockBranchesNear } from '@/mocks/branches'
+import { branchMarkerImage, centerAboveSheet, myLocationMarkerImage } from '@/utils/branchMarkers'
+import { FALLBACK_LOCATION, getCurrentLocation } from '@/utils/geolocation'
+import { loadKakaoMaps } from '@/utils/kakaoMaps'
+import type { KakaoCircle, KakaoMap, KakaoMarker } from '@/utils/kakaoMaps'
+import type { Branch } from '@/api/types'
+
+const SEARCH_RADIUS_KM = 1
+const EARTH_RADIUS_KM = 6371.0088
+const BUTTON_SHEET_GAP = 16
+
+const mapContainer = ref<HTMLDivElement | null>(null)
+const isLoadingMap = ref(true)
+const mapError = ref('')
+const locationNotice = ref('')
+const hasMyLocation = ref(false)
+const myLocation = ref(FALLBACK_LOCATION)
+const selectedBranchId = ref<number | null>(null)
+
+let map: KakaoMap | null = null
+let myLocationMarker: KakaoMarker | null = null
+let branchMarkers: { branch: Branch; marker: KakaoMarker }[] = []
+
+function toRad(deg: number) {
+  return (deg * Math.PI) / 180
+}
+
+// same Haversine formula the backend's DistanceCalculator uses, so distances here
+// will line up once this screen switches to the real "nearby branches" endpoint
+function distanceKm(lat1: number, lng1: number, lat2: number, lng2: number) {
+  const dLat = toRad(lat2 - lat1)
+  const dLng = toRad(lng2 - lng1)
+  const a =
+    Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2
+  return EARTH_RADIUS_KM * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+}
+
+const branchesWithDistance = computed<Branch[]>(() =>
+  buildMockBranchesNear(myLocation.value).map((branch) => ({
+    ...branch,
+    distanceKm: Number(distanceKm(myLocation.value.lat, myLocation.value.lng, branch.lat, branch.lng).toFixed(2)),
+  })),
+)
+
+const nearbyBranches = computed(() =>
+  branchesWithDistance.value.filter((branch) => (branch.distanceKm ?? 0) <= SEARCH_RADIUS_KM),
+)
+
+async function initMap() {
+  if (!mapContainer.value) return
+  isLoadingMap.value = true
+  mapError.value = ''
+  locationNotice.value = ''
+
+  try {
+    await loadKakaoMaps()
+    const maps = window.kakao!.maps
+
+    const location = await getCurrentLocation()
+    myLocation.value = location
+    hasMyLocation.value = !location.isFallback
+    if (location.isFallback) {
+      locationNotice.value = '위치 확인이 안 돼서 서울시청 기준으로 보여드려요. 위치 권한을 확인해 주세요.'
+    }
+
+    const center = new maps.LatLng(location.lat, location.lng)
+    map = new maps.Map(mapContainer.value, { center, level: 5 })
+
+    myLocationMarker = new maps.Marker({ position: center, image: myLocationMarkerImage(maps) })
+    myLocationMarker.setMap(map)
+
+    const circle: KakaoCircle = new maps.Circle({
+      center,
+      radius: SEARCH_RADIUS_KM * 1000,
+      strokeWeight: 1,
+      strokeColor: '#ef6a67',
+      strokeOpacity: 0.5,
+      fillColor: '#ef6a67',
+      fillOpacity: 0.12,
+    })
+    circle.setMap(map)
+
+    branchMarkers = nearbyBranches.value.map((branch) => {
+      const marker = new maps.Marker({
+        position: new maps.LatLng(branch.lat, branch.lng),
+        image: branchMarkerImage(maps, false),
+      })
+      marker.setMap(map)
+      maps.event.addListener(marker, 'click', () => {
+        selectedBranchId.value = branch.branchId
+      })
+      return { branch, marker }
+    })
+
+    maps.event.addListener(map, 'click', () => {
+      selectedBranchId.value = null
+    })
+  } catch (error) {
+    mapError.value = error instanceof Error ? error.message : '지도를 불러오지 못했어요.'
+  } finally {
+    isLoadingMap.value = false
+  }
+}
+
+function recenterOnMe() {
+  if (!map || !myLocationMarker) return
+  map.setCenter(myLocationMarker.getPosition())
+}
+
+const selectedBranch = computed(
+  () => nearbyBranches.value.find((branch) => branch.branchId === selectedBranchId.value) ?? null,
+)
+
+const { sheetEl, sheetHeight } = useBranchSheet(
+  () => selectedBranch.value,
+  (branch, heightPx) => {
+    if (!map) return
+    const maps = window.kakao?.maps
+    if (!maps) return
+    centerAboveSheet(map, maps, new maps.LatLng(branch.lat, branch.lng), heightPx)
+  },
+)
+
+const locateBtnOffset = computed(() => (selectedBranch.value ? sheetHeight.value + BUTTON_SHEET_GAP : 0))
+
+function closeSheet() {
+  selectedBranchId.value = null
+}
+
+function callBranch(branch: Branch) {
+  window.location.href = `tel:${branch.phone}`
+}
+
+function formatDistance(km: number | null) {
+  if (km == null) return ''
+  if (km < 1) return `${Math.round(km * 1000)}m`
+  return `${km.toFixed(1)}km`
+}
+
+// mock wait-time estimate for demo purposes — a real "nearby branches" endpoint would
+// return this from live congestion data, not something computed on the client. Rough
+// busier-around-midday curve plus a per-branch offset so it varies branch to branch.
+function estimateWaitMinutes(branchId: number) {
+  const hour = new Date().getHours()
+  const hourFactor = Math.max(0, 8 - Math.abs(hour - 12) * 1.5)
+  const branchOffset = (branchId % 5) * 2
+  return Math.max(2, Math.round(hourFactor + branchOffset))
+}
+
+watch(selectedBranchId, () => {
+  const maps = window.kakao?.maps
+  if (!maps) return
+  branchMarkers.forEach(({ branch, marker }) => {
+    marker.setImage(branchMarkerImage(maps, branch.branchId === selectedBranchId.value))
+  })
+})
+
+onMounted(initMap)
+</script>
+
+<template>
+  <AppScreen no-padding flush-footer>
+    <div class="explore">
+      <div class="explore__topbar">
+        <span class="explore__title">내 주변 은행</span>
+      </div>
+
+      <div class="explore__content">
+        <div ref="mapContainer" class="explore__map"></div>
+
+        <MapLoadingOverlay v-if="isLoadingMap" />
+        <p v-else-if="mapError" class="explore__status explore__status--error">{{ mapError }}</p>
+        <p v-else-if="locationNotice" class="explore__status">{{ locationNotice }}</p>
+
+        <MapLocateButton :disabled="!hasMyLocation" :offset="locateBtnOffset" @click="recenterOnMe" />
+
+        <Transition name="explore-sheet">
+          <div v-if="selectedBranch" ref="sheetEl" class="explore__sheet">
+            <button type="button" class="explore__sheet-close" aria-label="닫기" @click="closeSheet">
+              <X :size="18" :stroke-width="2.4" />
+            </button>
+
+            <div class="explore__sheet-header">
+              <span class="explore__sheet-icon">
+                <img :src="kbLogo" alt="" />
+              </span>
+              <div class="explore__sheet-info">
+                <h2>{{ selectedBranch.name }}</h2>
+                <p class="explore__sheet-meta">현재 위치에서 약 {{ formatDistance(selectedBranch.distanceKm) }}</p>
+                <p class="explore__sheet-address">{{ selectedBranch.address }}</p>
+              </div>
+            </div>
+            <p class="explore__sheet-wait">
+              <Clock :size="16" :stroke-width="2.2" />
+              현재 시각 기준 예상 대기 {{ estimateWaitMinutes(selectedBranch.branchId) }}분
+            </p>
+
+            <button type="button" class="explore__sheet-call" @click="callBranch(selectedBranch)">
+              <Phone :size="18" :stroke-width="2.2" />
+              전화하기
+            </button>
+          </div>
+        </Transition>
+      </div>
+    </div>
+
+    <template #footer>
+      <BottomTabBar />
+    </template>
+  </AppScreen>
+</template>
+
+<style scoped>
+.explore {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.explore__content {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+.explore__map {
+  position: absolute;
+  inset: 0;
+  background: var(--color-surface-alt);
+}
+
+.explore__topbar {
+  position: relative;
+  z-index: 2;
+  flex-shrink: 0;
+  padding: var(--space-3) var(--screen-padding-x);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-line);
+}
+
+.explore__title {
+  display: block;
+  color: var(--color-ink);
+  font-size: var(--text-base);
+  font-weight: 800;
+  text-align: center;
+}
+
+.explore__status {
+  position: absolute;
+  top: var(--space-4);
+  left: var(--screen-padding-x);
+  z-index: 2;
+  max-width: 62%;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-ink-soft);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  box-shadow: var(--shadow-card);
+}
+
+.explore__status--error {
+  color: var(--color-alert);
+}
+
+.explore__sheet {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 3;
+  padding: var(--space-5) var(--screen-padding-x) calc(var(--space-5) + env(safe-area-inset-bottom, 0px));
+  border-radius: 24px 24px 0 0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-bottom: 0;
+}
+
+.explore__sheet-close {
+  position: absolute;
+  top: var(--space-4);
+  right: var(--space-4);
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-alt);
+  color: var(--color-ink-soft);
+  cursor: pointer;
+}
+
+.explore__sheet-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.explore__sheet-icon {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  background: var(--color-yellow-light);
+}
+
+.explore__sheet-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.explore__sheet-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.explore__sheet h2 {
+  padding-right: var(--space-8);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: var(--text-xl);
+  font-weight: 900;
+}
+
+.explore__sheet-meta {
+  margin-top: var(--space-1);
+  color: var(--color-ink-soft);
+  font-size: var(--text-base);
+  font-weight: 600;
+}
+
+.explore__sheet-address {
+  margin-top: var(--space-1);
+  color: var(--color-ink-soft);
+  font-size: var(--text-base);
+  font-weight: 500;
+}
+
+.explore__sheet-wait {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+  color: var(--color-accent-deep);
+  font-size: var(--text-base);
+  font-weight: 700;
+}
+
+.explore__sheet-call {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: 52px;
+  margin-top: var(--space-4);
+  border: 0;
+  border-radius: var(--radius-lg);
+  background: var(--color-yellow-faint);
+  color: var(--color-accent-deep);
+  font-size: var(--text-base);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.explore-sheet-enter-active,
+.explore-sheet-leave-active {
+  transition: transform 220ms cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+.explore-sheet-enter-from,
+.explore-sheet-leave-to {
+  transform: translateY(100%);
+}
+</style>

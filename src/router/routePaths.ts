@@ -10,6 +10,7 @@ export const routePaths = {
   checklist: '/checklist',
   branches: '/branches',
   branchMap: '/branches/map',
+  branchExplore: '/branches/nearby',
   visitSummary: '/visit-summary',
   fraudWarning: '/fraud-warning',
   fraudDismissConfirm: '/fraud-warning/dismiss-confirm',
