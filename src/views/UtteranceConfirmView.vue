@@ -8,6 +8,7 @@ import FlowHeader from '@/components/common/FlowHeader.vue'
 import { routePaths } from '@/router/routePaths'
 import { consultationService } from '@/services/consultationService'
 import { useConsultationFlowStore } from '@/stores/consultationFlow'
+import type { ConsultationStatus } from '@/api/types'
 
 const router = useRouter()
 const consultationFlow = useConsultationFlowStore()
@@ -54,8 +55,8 @@ async function analyzeCurrentUtterance() {
   }
 }
 
-function handleConfirm() {
-  switch (consultationFlow.status) {
+function goToStatusScreen(status: ConsultationStatus | null) {
+  switch (status) {
     case 'TASK_CONFIRMED':
       void router.push(routePaths.visitDecision)
       break
@@ -68,7 +69,39 @@ function handleConfirm() {
     case 'FRAUD_WARNING':
       void router.push(routePaths.fraudWarning)
       break
+    default:
+      // never leave the button looking tappable but doing nothing
+      errorMessage.value = '다음 화면으로 넘어가지 못했어요. 다시 시도해 주세요.'
   }
+}
+
+async function handleConfirm() {
+  if (isAnalyzing.value) return
+
+  // Gemini rewrote the sentence, so approving it re-runs the analysis on the confirmed
+  // text — the response's status is what decides where to go next
+  if (consultationFlow.status === 'CORRECTION_CONFIRMATION_REQUIRED') {
+    if (!consultationFlow.consultationId) return
+
+    isAnalyzing.value = true
+    errorMessage.value = ''
+
+    try {
+      const result = await consultationService.confirmCorrection(consultationFlow.consultationId, {
+        confirmedUtterance: correctedUtterance.value,
+      })
+      consultationFlow.setAnalyzeResult(result)
+      goToStatusScreen(result.status)
+    } catch (error) {
+      errorMessage.value =
+        error instanceof Error ? error.message : '확인에 실패했어요. 다시 시도해 주세요.'
+    } finally {
+      isAnalyzing.value = false
+    }
+    return
+  }
+
+  goToStatusScreen(consultationFlow.status)
 }
 
 onMounted(() => {
