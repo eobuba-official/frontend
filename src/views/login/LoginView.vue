@@ -137,17 +137,9 @@ onBeforeUnmount(() => window.clearInterval(timer))
           :style="{ backgroundImage: `url(${charMascot})` }"
           aria-hidden="true"
         ></span>
-        <div class="login__brand-copy">
-          <strong class="login__brand-name" aria-label="어부바">
-            <span class="login__brand-initial login__brand-initial--eo">어</span>
-            <span class="login__brand-initial login__brand-initial--bu">부</span>
-            <span class="login__brand-initial login__brand-initial--ba">바</span>
-          </strong>
-          <span class="login__brand-tagline">어르신 부담 바로덜기</span>
-        </div>
       </div>
 
-      <h1 class="login__title">이름과 휴대폰 번호를<br />알려주세요</h1>
+      <h1 class="login__title">어부바를 시작하려면<br />정보를 입력해 주세요</h1>
 
       <label class="login-name-field" for="login-name">
         <input
@@ -219,63 +211,18 @@ onBeforeUnmount(() => window.clearInterval(timer))
 }
 
 .login__brand {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: var(--text-lg);
-  font-weight: 800;
+  display: grid;
+  place-items: center;
 }
 
 .login__logo {
-  width: 76px;
-  height: 76px;
+  width: 104px;
+  height: 104px;
   border-radius: var(--radius-pill);
   background-color: transparent;
   background-position: center;
   background-repeat: no-repeat;
   background-size: 100% auto;
-}
-
-.login__brand-name {
-  color: var(--color-ink);
-  font-family: 'JalnanGothic', 'Cafe24Ssurround', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
-  font-size: var(--text-base);
-  font-weight: 900;
-  line-height: 1.12;
-  letter-spacing: 0;
-  word-break: keep-all;
-  font-variation-settings: 'wght' 900;
-}
-
-.login__brand-copy {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-}
-
-.login__brand-tagline {
-  color: var(--color-ink-soft);
-  font-size: var(--text-xs);
-  font-weight: 700;
-  line-height: 1.2;
-}
-
-.login__brand-initial {
-  display: inline-block;
-  font-weight: 950;
-}
-
-.login__brand-initial--eo {
-  color: var(--color-ink);
-}
-
-.login__brand-initial--bu {
-  color: var(--color-ink);
-}
-
-.login__brand-initial--ba {
-  color: var(--color-ink);
 }
 
 .login-name-field {

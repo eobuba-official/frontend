@@ -89,6 +89,8 @@ function handleInput(event: Event) {
 .phone-field__row {
   display: inline-flex;
   align-items: baseline;
+  justify-content: center;
+  width: 100%;
 }
 
 .phone-field__row--error {
@@ -96,19 +98,25 @@ function handleInput(event: Event) {
 }
 
 .phone-field__prefix {
+  flex: 0 0 auto;
   font-size: var(--text-xl);
   font-weight: 800;
+  line-height: 1.3;
   color: var(--color-ink);
 }
 
 .phone-field__input {
-  width: 9ch;
+  flex: 0 0 10ch;
+  width: 10ch;
+  min-width: 0;
+  padding: 0;
   border: 0;
   background: transparent;
   color: var(--color-ink);
   font: inherit;
   font-size: var(--text-xl);
   font-weight: 800;
+  line-height: 1.3;
   text-align: left;
   transition:
     color 0.2s ease,
