@@ -39,6 +39,8 @@ body {
 }
 
 #app {
+  /* anchors the outgoing page while it animates out of flow during a route change */
+  position: relative;
   min-height: 100vh;
   min-height: 100dvh;
   /* matches .app-screen's own footprint so this shows through (as white, not the
