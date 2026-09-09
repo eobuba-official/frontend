@@ -94,7 +94,7 @@ async function startRecording() {
 function handleOrbPermissionDenied() {
   clearIdleMascotTimers()
   idleMascotMood.value = 'default'
-  micError.value = '마이크 권한이 꺼져 있어요. 브라우저 주소창의 마이크 아이콘에서 허용해 주세요.'
+  micError.value = '마이크 권한이 꺼져 있어요.\n주소창에서 마이크를 허용해 주세요.'
 }
 
 async function stopRecordingAndTranscribe() {
@@ -162,7 +162,7 @@ function mapGetUserMediaError(error: unknown): string {
   switch (name) {
     case 'NotAllowedError':
     case 'SecurityError':
-      return '마이크 권한이 꺼져 있어요. 브라우저 주소창의 마이크 아이콘에서 허용해 주세요.'
+      return '마이크 권한이 꺼져 있어요.\n주소창에서 마이크를 허용해 주세요.'
     case 'NotFoundError':
       return '마이크를 찾을 수 없어요. 마이크가 연결되어 있는지 확인해 주세요.'
     default:
@@ -229,7 +229,7 @@ onBeforeUnmount(() => {
             <p class="home__hero-caption">
               <template v-if="isProcessing">잠시만 기다려 주세요</template>
               <template v-else-if="isListening">말씀을 마치면 다시 눌러 주세요</template>
-              <template v-else>저를 누르고 말씀해 주세요</template>
+              <template v-else>저를 누르고 말씀해 주세요!</template>
             </p>
           </div>
         </div>
@@ -390,8 +390,11 @@ onBeforeUnmount(() => {
   color: var(--color-accent-deep);
   font-size: var(--text-sm);
   font-weight: 700;
+  line-height: 1.55;
   opacity: 0;
+  text-align: center;
   visibility: hidden;
+  white-space: pre-line;
   transition:
     opacity 0.2s ease,
     visibility 0.2s ease;
