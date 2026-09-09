@@ -9,7 +9,7 @@ import { routePaths } from '@/router/routePaths'
 import { authService } from '@/services/authService'
 import { consultationService } from '@/services/consultationService'
 import { useConsultationFlowStore } from '@/stores/consultationFlow'
-import type { ConsultationHistoryItem, Guardian } from '@/api/types'
+import type { ConsultationHistoryItem, FraudPatternType, Guardian } from '@/api/types'
 
 const router = useRouter()
 const consultationFlow = useConsultationFlowStore()
@@ -19,9 +19,29 @@ const isLoadingGuardians = ref(true)
 const guardiansError = ref('')
 const recentFraudHistory = ref<ConsultationHistoryItem[]>([])
 
-const summaryLine = computed(
-  () => consultationFlow.guidance ?? consultationFlow.fraudCheck?.patterns[0]?.explanation ?? null,
-)
+// the LLM occasionally answers in English; an English sentence on a fraud warning is
+// worse than a fixed Korean one, so fall back to copy keyed on the detected pattern
+const FRAUD_SUMMARY_BY_TYPE: Record<FraudPatternType, string> = {
+  IMPERSONATION: '검찰·경찰·금융기관을 사칭하는 표현이 있어요.',
+  SAFE_ACCOUNT: '돈을 다른 계좌로 옮기라는 표현이 있어요. 안전한 계좌라는 것은 없어요.',
+  SECRECY: '가족이나 은행에 알리지 말라는 표현이 있어요.',
+  REMOTE_CONTROL: '휴대폰에 앱을 깔게 하거나 원격으로 조작하려는 표현이 있어요.',
+  URGENCY: '지금 당장 하라고 재촉하는 표현이 있어요.',
+}
+
+function koreanOrNull(text: string | null | undefined) {
+  return text && /[가-힣]/.test(text) ? text : null
+}
+
+const summaryLine = computed(() => {
+  const pattern = consultationFlow.fraudCheck?.patterns[0]
+
+  return (
+    koreanOrNull(consultationFlow.guidance) ??
+    koreanOrNull(pattern?.explanation) ??
+    (pattern ? FRAUD_SUMMARY_BY_TYPE[pattern.type] : null)
+  )
+})
 
 function iconForSafetyAction(action: string) {
   if (action.includes('전화') && (action.includes('끊') || action.includes('말고'))) return PhoneOff
