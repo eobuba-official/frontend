@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { Phone } from '@lucide/vue'
 import AppScreen from '@/components/common/AppScreen.vue'
 import BottomTabBar from '@/components/common/BottomTabBar.vue'
@@ -10,7 +10,7 @@ import { buildMockBranchesNear } from '@/mocks/branches'
 import { consultationService } from '@/services/consultationService'
 import { branchMarkerImage, centerAboveSheet, myLocationMarkerImage } from '@/utils/branchMarkers'
 import { FALLBACK_LOCATION, getCurrentLocation } from '@/utils/geolocation'
-import { loadKakaoMaps } from '@/utils/kakaoMaps'
+import { loadKakaoMaps, relayoutWhenResized } from '@/utils/kakaoMaps'
 import type { KakaoCircle, KakaoMap, KakaoMarker } from '@/utils/kakaoMaps'
 import type { NearbyBranch } from '@/api/types'
 
@@ -31,6 +31,7 @@ const rawBranches = ref<NearbyBranch[]>([])
 
 let map: KakaoMap | null = null
 let myLocationMarker: KakaoMarker | null = null
+let stopRelayout: (() => void) | null = null
 let branchMarkers: { branch: NearbyBranch; marker: KakaoMarker }[] = []
 
 function toRad(deg: number) {
@@ -60,11 +61,6 @@ function useMockBranches(origin: { lat: number; lng: number }) {
 }
 
 async function loadNearbyBranches(origin: { lat: number; lng: number }) {
-  if (import.meta.env.VITE_USE_MOCK_API === 'true') {
-    useMockBranches(origin)
-    return
-  }
-
   try {
     const result = await consultationService.getNearbyBranches({ lat: origin.lat, lng: origin.lng, limit: 20 })
     rawBranches.value = result.branches
@@ -97,6 +93,7 @@ async function initMap() {
     const fallbackCenter = new maps.LatLng(FALLBACK_LOCATION.lat, FALLBACK_LOCATION.lng)
     const mapInstance = new maps.Map(mapContainer.value, { center: fallbackCenter, level: 5 })
     map = mapInstance
+    stopRelayout = relayoutWhenResized(mapInstance, mapContainer.value)
     maps.event.addListener(mapInstance, 'click', () => {
       selectedBranchId.value = null
     })
@@ -196,6 +193,8 @@ watch(selectedBranchId, () => {
 })
 
 onMounted(initMap)
+
+onBeforeUnmount(() => stopRelayout?.())
 </script>
 
 <template>

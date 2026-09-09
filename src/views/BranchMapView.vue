@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { Clock, Phone } from '@lucide/vue'
 import { useRouter } from 'vue-router'
 import AppScreen from '@/components/common/AppScreen.vue'
@@ -11,7 +11,7 @@ import MapLocateButton from '@/components/common/MapLocateButton.vue'
 import { routePaths } from '@/router/routePaths'
 import { useConsultationFlowStore } from '@/stores/consultationFlow'
 import { branchMarkerImage, centerAboveSheet, myLocationMarkerImage } from '@/utils/branchMarkers'
-import { loadKakaoMaps } from '@/utils/kakaoMaps'
+import { loadKakaoMaps, relayoutWhenResized } from '@/utils/kakaoMaps'
 import type { KakaoMap, KakaoMarker } from '@/utils/kakaoMaps'
 import { isLocationPermissionEnabled } from '@/utils/permissionPreferences'
 
@@ -50,6 +50,7 @@ const selected = computed(
 
 let map: KakaoMap | null = null
 let myLocationMarker: KakaoMarker | null = null
+let stopRelayout: (() => void) | null = null
 const markers: { rank: number; marker: KakaoMarker }[] = []
 
 async function initMap() {
@@ -71,6 +72,7 @@ async function initMap() {
       level: 5,
     })
     map = mapInstance
+    stopRelayout = relayoutWhenResized(mapInstance, mapContainer.value)
 
     uniqueBranches.value.forEach((item) => {
       const marker = new maps.Marker({
@@ -87,6 +89,12 @@ async function initMap() {
     maps.event.addListener(mapInstance, 'click', () => {
       selectedRank.value = null
     })
+
+    // the sheet is already open for the preselected branch, so its height was measured
+    // before the map existed — apply the offset now that there is a map to pan
+    if (selected.value && sheetHeight.value > 0) {
+      centerMapAboveSheet(sheetHeight.value)
+    }
 
     if (isLocationPermissionEnabled() && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -156,6 +164,8 @@ function callBranch() {
 }
 
 onMounted(initMap)
+
+onBeforeUnmount(() => stopRelayout?.())
 </script>
 
 <template>

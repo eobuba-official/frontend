@@ -18,6 +18,8 @@ export interface KakaoMap {
   // animates to the new center, unlike setCenter's instant jump
   panTo(position: KakaoLatLng): void
   getProjection(): KakaoProjection
+  // re-measures the container, keeping the current center
+  relayout(): void
 }
 
 export interface KakaoMarkerImage {
@@ -60,6 +62,26 @@ declare global {
   interface Window {
     kakao?: { maps: KakaoMapsNamespace }
   }
+}
+
+/**
+ * Kakao measures the container once, when the map is created. If that happens while the
+ * element still has no size — a route transition that hasn't settled, a parent that lays
+ * out a frame later — the map renders blank and stays that way until something forces a
+ * re-measure, which is why re-entering the screen "fixes" it. Watch the container and
+ * relayout whenever it reports a real size. Returns a cleanup function.
+ */
+export function relayoutWhenResized(map: KakaoMap, container: HTMLElement) {
+  if (typeof ResizeObserver === 'undefined') return () => {}
+
+  const observer = new ResizeObserver(() => {
+    if (container.clientWidth > 0 && container.clientHeight > 0) {
+      map.relayout()
+    }
+  })
+  observer.observe(container)
+
+  return () => observer.disconnect()
 }
 
 let loadPromise: Promise<void> | null = null
