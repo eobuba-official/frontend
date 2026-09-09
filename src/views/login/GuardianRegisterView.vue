@@ -4,16 +4,12 @@ import { ChevronLeft } from '@lucide/vue'
 import { useRouter } from 'vue-router'
 import AppScreen from '@/components/common/AppScreen.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
+import ConfirmModal from '@/components/common/ConfirmModal.vue'
 import PhoneNumberField from '@/components/common/PhoneNumberField.vue'
 import { routePaths } from '@/router/routePaths'
 import { authService } from '@/services/authService'
 import { useAuthFlowStore } from '@/stores/authFlow'
 import type { GuardianRelation } from '@/api/types'
-
-interface RelationOption {
-  label: string
-  value: GuardianRelation
-}
 
 const router = useRouter()
 const authFlow = useAuthFlowStore()
@@ -22,28 +18,46 @@ if (!authFlow.signupToken) {
   router.replace(routePaths.login)
 }
 
-const relations: RelationOption[] = [
-  { label: '아들', value: '아들' },
-  { label: '딸', value: '딸' },
-  { label: '배우자', value: '배우자' },
-  { label: '보호자', value: '기타' },
-]
+const relations: GuardianRelation[] = ['아들', '딸', '배우자', '기타']
 
+const ownName = ref('')
 const guardianName = ref('')
 const guardianPhoneDigits = ref('')
 const relation = ref<GuardianRelation>('아들')
 const isSubmitting = ref(false)
 const errorMessage = ref('')
+const isConfirmOpen = ref(false)
 
 const canRegister = computed(
   () =>
-    authFlow.userName.trim().length > 0 &&
+    ownName.value.trim().length > 0 &&
     guardianName.value.trim().length > 0 &&
     guardianPhoneDigits.value.length === 8 &&
     !isSubmitting.value,
 )
 
-async function handleRegister() {
+const guardianPhoneNumber = computed(() => `010${guardianPhoneDigits.value}`)
+const formattedGuardianPhone = computed(() =>
+  guardianPhoneNumber.value.length === 11
+    ? `${guardianPhoneNumber.value.slice(0, 3)}-${guardianPhoneNumber.value.slice(3, 7)}-${guardianPhoneNumber.value.slice(7)}`
+    : guardianPhoneNumber.value,
+)
+const confirmDescription = computed(
+  () => `${formattedGuardianPhone.value}, ${relation.value} ${guardianName.value.trim()}님이 맞나요?`,
+)
+
+function handleRegister() {
+  if (!canRegister.value) return
+  errorMessage.value = ''
+  isConfirmOpen.value = true
+}
+
+function closeConfirm() {
+  if (isSubmitting.value) return
+  isConfirmOpen.value = false
+}
+
+async function confirmRegister() {
   if (!canRegister.value) return
 
   isSubmitting.value = true
@@ -52,11 +66,11 @@ async function handleRegister() {
   try {
     await authService.signup({
       signupToken: authFlow.signupToken ?? '',
-      name: authFlow.userName.trim(),
+      name: ownName.value.trim(),
       guardians: [
         {
           name: guardianName.value.trim(),
-          phoneNumber: `010${guardianPhoneDigits.value}`,
+          phoneNumber: guardianPhoneNumber.value,
           relation: relation.value,
         },
       ],
@@ -64,8 +78,7 @@ async function handleRegister() {
     authFlow.reset()
     await router.push(routePaths.home)
   } catch (error) {
-    errorMessage.value =
-      error instanceof Error ? error.message : '가입을 완료하지 못했어요. 다시 시도해 주세요.'
+    errorMessage.value = error instanceof Error ? error.message : '가입을 완료하지 못했어요. 다시 시도해 주세요.'
   } finally {
     isSubmitting.value = false
   }
@@ -75,15 +88,26 @@ async function handleRegister() {
 <template>
   <AppScreen>
     <template #header>
-      <button class="back-button" type="button" @click="router.push(routePaths.login)">
-        <ChevronLeft :size="18" :stroke-width="2.4" />
-        뒤로
+      <button class="back-button" type="button" @click="router.push(routePaths.smsVerify)">
+        <ChevronLeft :size="18" :stroke-width="2.4" aria-hidden="true" />
+        <span>뒤로</span>
       </button>
     </template>
 
     <section class="guardian">
       <h1>가족 한 분을<br />등록해 주세요</h1>
       <p class="guardian__lede">수상한 전화가 감지되면 이 분께<br />바로 알려드려요.</p>
+
+      <label class="name-field" for="own-name">
+        <span class="name-field__label">본인 이름</span>
+        <input
+          id="own-name"
+          v-model="ownName"
+          class="name-field__input"
+          type="text"
+          placeholder="이름을 입력해 주세요"
+        />
+      </label>
 
       <label class="name-field" for="guardian-name">
         <span class="name-field__label">가족 이름</span>
@@ -103,13 +127,13 @@ async function handleRegister() {
         <div class="relation__options">
           <button
             v-for="option in relations"
-            :key="option.label"
+            :key="option"
             type="button"
             class="relation__chip"
-            :class="{ 'relation__chip--active': relation === option.value }"
-            @click="relation = option.value"
+            :class="{ 'relation__chip--active': relation === option }"
+            @click="relation = option"
           >
-            {{ option.label }}
+            {{ option }}
           </button>
         </div>
       </div>
@@ -123,6 +147,26 @@ async function handleRegister() {
       </BaseButton>
     </template>
   </AppScreen>
+
+  <ConfirmModal
+    v-if="isConfirmOpen"
+    role="alertdialog"
+    title="가족 정보를 확인해 주세요"
+    :description="confirmDescription"
+    @close="closeConfirm"
+  >
+    <p class="modal-guide">번호가 틀리면 안내 문자가 다른 사람에게 갈 수 있어요.</p>
+    <p v-if="errorMessage" class="guardian__error">{{ errorMessage }}</p>
+
+    <template #actions>
+      <BaseButton variant="ghost" block :disabled="isSubmitting" @click="closeConfirm">
+        다시 수정
+      </BaseButton>
+      <BaseButton block :disabled="isSubmitting" @click="confirmRegister">
+        {{ isSubmitting ? '시작하는 중...' : '맞아요' }}
+      </BaseButton>
+    </template>
+  </ConfirmModal>
 </template>
 
 <style scoped>
@@ -135,7 +179,14 @@ async function handleRegister() {
   color: var(--color-ink-soft);
   font: inherit;
   font-weight: 700;
+  line-height: 1;
   cursor: pointer;
+}
+
+.back-button > svg {
+  display: block;
+  flex-shrink: 0;
+  transform: translateY(1px);
 }
 
 .guardian {
@@ -228,5 +279,12 @@ async function handleRegister() {
 .guardian__error {
   color: var(--color-alert);
   font-size: var(--text-sm);
+}
+
+.modal-guide {
+  margin-top: var(--space-3);
+  color: var(--color-ink-soft);
+  font-size: var(--text-sm);
+  line-height: 1.5;
 }
 </style>

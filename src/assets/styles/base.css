@@ -36,6 +36,12 @@ body {
 #app {
   min-height: 100vh;
   min-height: 100dvh;
+  /* matches .app-screen's own footprint so this shows through (as white, not the
+     gray desktop backdrop) during the brief gap in route transitions when no
+     .app-screen is mounted yet — e.g. rapid bottom-tab switching */
+  max-width: var(--screen-max-width);
+  margin-inline: auto;
+  background: var(--color-bg);
 }
 
 h1,

@@ -23,7 +23,11 @@ const confidencePercent = computed(() =>
   consultationFlow.confidence == null ? null : Math.round(consultationFlow.confidence * 100),
 )
 
-const selectedCode = ref<string | null>(primaryCandidate.value?.taskTypeCode ?? null)
+// on a back-navigation the task is already chosen, so restore that instead of
+// silently defaulting back to the top candidate
+const selectedCode = ref<string | null>(
+  consultationFlow.task?.taskTypeCode ?? primaryCandidate.value?.taskTypeCode ?? null,
+)
 const isSubmitting = ref(false)
 const errorMessage = ref('')
 

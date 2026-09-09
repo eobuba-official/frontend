@@ -57,10 +57,11 @@ export const useConsultationFlowStore = defineStore('consultationFlow', () => {
     correctionApplied.value = result.classification.correctionApplied
   }
 
+  // candidates are kept so the task-selection screen still renders its options when the
+  // user navigates back into it — `status`/`task` already mark the choice as resolved
   function setTaskSelection(result: TaskSelectionResult) {
     status.value = result.status
     task.value = result.task
-    candidates.value = []
     confidence.value = null
     visitDecision.value = result.visitDecision
   }

@@ -86,6 +86,10 @@ function submitInput() {
   gap: var(--space-5);
 }
 
+.manual-input h1 {
+  word-break: keep-all;
+}
+
 .manual-input__field {
   position: relative;
   display: block;

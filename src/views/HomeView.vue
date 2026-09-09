@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, ref } from 'vue'
 import { Keyboard, ShieldAlert } from '@lucide/vue'
 import { useRouter } from 'vue-router'
 import AppScreen from '@/components/common/AppScreen.vue'
 import BottomTabBar from '@/components/common/BottomTabBar.vue'
-import logoMark from '@/assets/img/logo-mark.png'
 import charMascot from '@/assets/img/char.png'
 import { routePaths } from '@/router/routePaths'
 import { speechAnalysisService } from '@/services/speechAnalysisService'
@@ -19,7 +18,6 @@ const isListening = ref(false)
 const isProcessing = ref(false)
 const micError = ref('')
 const voiceMediaStream = ref<MediaStream | null>(null)
-const idleMascotMood = ref<'default' | 'sleepy' | 'surprised'>('default')
 
 let mediaStream: MediaStream | null = null
 let audioContext: AudioContext | null = null
@@ -27,19 +25,11 @@ let sourceNode: MediaStreamAudioSourceNode | null = null
 let processorNode: ScriptProcessorNode | null = null
 let silentGainNode: GainNode | null = null
 let audioChunks: Float32Array[] = []
-let idleTimer: number | undefined
-let sleepyTimer: number | undefined
-let surprisedTimer: number | undefined
 
 const voiceOrbState = computed<'idle' | 'listening' | 'thinking'>(() => {
   if (isProcessing.value) return 'thinking'
   if (isListening.value) return 'listening'
   return 'idle'
-})
-
-const voiceOrbMood = computed<'default' | 'sleepy' | 'surprised' | 'error'>(() => {
-  if (micError.value) return 'error'
-  return idleMascotMood.value
 })
 
 const WEEKDAY_LABELS = ['일', '월', '화', '수', '목', '금', '토']
@@ -52,16 +42,15 @@ const todayLabel = computed(
 
 const greetingLabel = computed(() => {
   const hour = today.getHours()
-  if (hour >= 5 && hour < 11) return '좋은 아침이에요 🌞'
-  if (hour >= 11 && hour < 14) return '점심 맛있게 드셨나요 🍚'
-  if (hour >= 14 && hour < 18) return '좋은 오후예요 😊'
-  if (hour >= 18 && hour < 22) return '좋은 저녁이에요 🌆'
-  return '늦은 밤이에요 😊'
+  if (hour >= 5 && hour < 11) return '좋은 아침이에요'
+  if (hour >= 11 && hour < 14) return '점심 맛있게 드셨나요'
+  if (hour >= 14 && hour < 18) return '좋은 오후예요'
+  if (hour >= 18 && hour < 22) return '좋은 저녁이에요'
+  return '늦은 밤이에요'
 })
 
 async function handleVoiceStart() {
   if (isProcessing.value) return
-  resetIdleMascot()
 
   if (isListening.value) {
     await stopRecordingAndTranscribe()
@@ -69,12 +58,14 @@ async function handleVoiceStart() {
   }
 
   micError.value = ''
+  // clear the previous consultation only when a new one actually starts — resetting on
+  // every Home mount wiped the state that the flow screens still need when the user
+  // navigates back into them
+  consultationFlow.reset()
   await startRecording()
 }
 
 async function startRecording() {
-  clearIdleTimers()
-
   if (!isVoicePermissionEnabled()) {
     micError.value = '설정에서 음성 권한을 켜주세요.'
     return
@@ -107,7 +98,6 @@ async function startRecording() {
 }
 
 function handleOrbPermissionDenied() {
-  resetIdleMascot()
   micError.value = '마이크 권한이 꺼져 있어요. 브라우저 주소창의 마이크 아이콘에서 허용해 주세요.'
 }
 
@@ -119,7 +109,6 @@ async function stopRecordingAndTranscribe() {
 
   if (samples.length === 0) {
     micError.value = '말씀이 들리지 않았어요. 다시 눌러서 말씀해 주세요.'
-    scheduleIdleMascot()
     return
   }
 
@@ -141,42 +130,7 @@ async function stopRecordingAndTranscribe() {
     micError.value = '음성을 분석하지 못했어요. 다시 눌러서 말씀해 주세요.'
   } finally {
     isProcessing.value = false
-    scheduleIdleMascot()
   }
-}
-
-function clearIdleTimers() {
-  window.clearTimeout(idleTimer)
-  window.clearTimeout(sleepyTimer)
-  window.clearTimeout(surprisedTimer)
-  idleTimer = undefined
-  sleepyTimer = undefined
-  surprisedTimer = undefined
-}
-
-function resetIdleMascot() {
-  clearIdleTimers()
-  idleMascotMood.value = 'default'
-}
-
-function scheduleIdleMascot() {
-  clearIdleTimers()
-
-  if (isListening.value || isProcessing.value || micError.value) return
-
-  idleTimer = window.setTimeout(() => {
-    if (isListening.value || isProcessing.value || micError.value) return
-
-    idleMascotMood.value = 'sleepy'
-    sleepyTimer = window.setTimeout(() => {
-      idleMascotMood.value = 'surprised'
-
-      surprisedTimer = window.setTimeout(() => {
-        idleMascotMood.value = 'default'
-        scheduleIdleMascot()
-      }, 1100)
-    }, 3600)
-  }, 10000)
 }
 
 function mapGetUserMediaError(error: unknown): string {
@@ -208,24 +162,15 @@ function closeAudioGraph() {
 }
 
 function goTextInput() {
-  resetIdleMascot()
+  consultationFlow.reset()
   void router.push(routePaths.input)
 }
 
 function goFraudWarning() {
-  resetIdleMascot()
   void router.push(routePaths.fraudWarning)
 }
 
-onMounted(() => {
-  consultationFlow.reset()
-  scheduleIdleMascot()
-})
-
-onBeforeUnmount(() => {
-  clearIdleTimers()
-  closeAudioGraph()
-})
+onBeforeUnmount(closeAudioGraph)
 </script>
 
 <template>
@@ -235,19 +180,14 @@ onBeforeUnmount(() => {
 
       <header class="home__header">
         <div class="home__brand">
-          <img
+          <span
             class="home__brand-avatar"
-            :src="logoMark"
-            alt=""
+            :style="{ backgroundImage: `url(${charMascot})` }"
             aria-hidden="true"
-          />
+          ></span>
           <div class="home__brand-copy">
-            <h1 class="home__brand-name" aria-label="어부바">
-              <span class="home__brand-initial home__brand-initial--eo">어</span>
-              <span class="home__brand-initial home__brand-initial--bu">부</span>
-              <span class="home__brand-initial home__brand-initial--ba">바</span>
-            </h1>
-            <p class="home__brand-tagline">어르신 부담 바로덜기</p>
+            <h1 class="home__brand-name">어부바</h1>
+            <p class="home__brand-tagline">은행 일, 어부바가 함께해요</p>
           </div>
         </div>
       </header>
@@ -256,11 +196,6 @@ onBeforeUnmount(() => {
         <p class="home__greeting-date">{{ todayLabel }}</p>
         <p class="home__greeting-message">{{ greetingLabel }}</p>
         <p class="home__greeting-tagline">오늘도 어부바가 함께할게요</p>
-        <span
-          class="home__greeting-mascot"
-          :style="{ backgroundImage: `url(${charMascot})` }"
-          aria-hidden="true"
-        ></span>
       </section>
 
       <section class="home__hero" aria-label="음성으로 말씀해 주세요">
@@ -271,24 +206,19 @@ onBeforeUnmount(() => {
                 ? '잠시만 기다려주세요'
                 : isListening
                   ? '끝나면 다시 눌러주세요'
-                  : '저를 눌러서 말씀해주세요'
+                  : '마이크를 누르고 편하게 말씀하세요'
             }}
           </p>
         </div>
 
-        <div class="home__voice-stage">
-          <VoiceOrb
-            :state="voiceOrbState"
-            :mood="voiceOrbMood"
-            :media-stream="voiceMediaStream"
-            @toggle="handleVoiceStart"
-            @permission-denied="handleOrbPermissionDenied"
-          />
-        </div>
+        <VoiceOrb
+          :state="voiceOrbState"
+          :media-stream="voiceMediaStream"
+          @toggle="handleVoiceStart"
+          @permission-denied="handleOrbPermissionDenied"
+        />
 
-        <small class="home__hero-error" :class="{ 'home__hero-error--visible': micError }">
-          {{ micError || '음성 안내 상태' }}
-        </small>
+        <small v-if="micError" class="home__hero-error">{{ micError }}</small>
         <div class="home__hero-bottom" aria-hidden="true"></div>
       </section>
 
@@ -344,15 +274,17 @@ onBeforeUnmount(() => {
 .home__brand {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-2);
   min-width: 0;
 }
 
 .home__brand-avatar {
-  flex: 0 0 52px;
-  width: 52px;
-  height: 52px;
-  object-fit: contain;
+  flex: 0 0 76px;
+  width: 76px;
+  height: 76px;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 100% auto;
 }
 
 .home__brand-copy {
@@ -361,30 +293,9 @@ onBeforeUnmount(() => {
 
 .home__brand-name {
   color: var(--color-ink);
-  font-family: 'JalnanGothic', 'Cafe24Ssurround', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
-  font-size: var(--text-2xl);
-  font-weight: 950;
-  line-height: 1.12;
-  letter-spacing: 0;
-  word-break: keep-all;
-  font-variation-settings: 'wght' 900;
-}
-
-.home__brand-initial {
-  display: inline-block;
-  font-weight: 950;
-}
-
-.home__brand-initial--eo {
-  color: var(--color-ink);
-}
-
-.home__brand-initial--bu {
-  color: var(--color-ink);
-}
-
-.home__brand-initial--ba {
-  color: var(--color-ink);
+  font-family: 'Jua', var(--font-body);
+  font-size: 1.7rem;
+  line-height: 1.1;
 }
 
 .home__brand-tagline {
@@ -467,32 +378,10 @@ onBeforeUnmount(() => {
   font-weight: 600;
 }
 
-.home__voice-stage {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: min(72vw, 282px);
-  height: min(72vw, 282px);
-}
-
 .home__hero-error {
-  min-height: 20px;
   color: var(--color-accent-deep);
   font-size: var(--text-sm);
   font-weight: 700;
-  opacity: 0;
-  visibility: hidden;
-  transform: translateY(-2px);
-  transition:
-    opacity 0.18s ease,
-    transform 0.18s ease,
-    visibility 0.18s ease;
-}
-
-.home__hero-error--visible {
-  opacity: 1;
-  visibility: visible;
-  transform: translateY(0);
 }
 
 .quick-actions {
@@ -582,5 +471,4 @@ onBeforeUnmount(() => {
     font-size: var(--text-lg);
   }
 }
-
 </style>

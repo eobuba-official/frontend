@@ -80,8 +80,8 @@ onMounted(async () => {
             router.push(consultationFlow.fraudCheck ? routePaths.utteranceConfirm : routePaths.home)
           "
         >
-          <ChevronLeft :size="18" :stroke-width="2.4" />
-          뒤로
+          <ChevronLeft :size="18" :stroke-width="2.4" aria-hidden="true" />
+          <span>뒤로</span>
         </button>
         <button class="fraud-header__button" type="button" @click="router.push(routePaths.home)">
           처음으로
@@ -146,36 +146,41 @@ onMounted(async () => {
         description="은행은 안전계좌로 돈을 옮기라고 요구하지 않습니다."
       />
 
-      <div class="fraud__card">
-        <h2>수상하면 가족에게 바로 알리세요</h2>
-        <p v-if="isLoadingGuardians" class="fraud__status">불러오는 중...</p>
-        <p v-else-if="guardiansError" class="fraud__status fraud__status--error">
-          {{ guardiansError }}
-        </p>
-        <ul v-else-if="guardians.length > 0" class="fraud__steps">
-          <li v-for="guardian in guardians" :key="guardian.guardianId" class="fraud__guardian-row">
-            <span class="fraud__step-icon" aria-hidden="true">
-              <User :size="20" :stroke-width="2.2" />
-            </span>
-            <span class="fraud__guardian-info">
-              <strong>{{ guardian.name }} ({{ guardian.relation }})</strong>
-              <small>{{ formatPhone(guardian.phoneNumber) }}</small>
-            </span>
-            <button
-              class="fraud__call-button"
-              type="button"
-              :aria-label="`${guardian.name}에게 전화하기`"
-              @click="callGuardian(guardian.phoneNumber)"
+      <div class="fraud__family-section">
+        <h2>가족과 함께 확인해 보세요</h2>
+        <div class="fraud__card fraud__card--guardian">
+          <p v-if="isLoadingGuardians" class="fraud__status">불러오는 중...</p>
+          <p v-else-if="guardiansError" class="fraud__status fraud__status--error">
+            {{ guardiansError }}
+          </p>
+          <ul v-else-if="guardians.length > 0" class="fraud__steps">
+            <li v-for="guardian in guardians" :key="guardian.guardianId" class="fraud__guardian-row">
+              <span class="fraud__step-icon" aria-hidden="true">
+                <User :size="20" :stroke-width="2.2" />
+              </span>
+              <span class="fraud__guardian-info">
+                <strong class="fraud__guardian-heading">
+                  <span>{{ guardian.name }}</span>
+                  <span class="fraud__guardian-relation">{{ guardian.relation }}</span>
+                </strong>
+                <small>{{ formatPhone(guardian.phoneNumber) }}</small>
+              </span>
+              <button
+                class="fraud__call-button"
+                type="button"
+                :aria-label="`${guardian.name}에게 전화하기`"
+                @click="callGuardian(guardian.phoneNumber)"
+              >
+                <PhoneCall :size="18" :stroke-width="2.2" />
+              </button>
+            </li>
+          </ul>
+          <div v-else class="fraud__empty">
+            <p>등록된 가족이 없어요. 가족을 등록해두면 더 안전해요.</p>
+            <BaseButton variant="ghost" block @click="router.push(routePaths.settings)"
+              >가족 등록하러 가기</BaseButton
             >
-              <PhoneCall :size="18" :stroke-width="2.2" />
-            </button>
-          </li>
-        </ul>
-        <div v-else class="fraud__empty">
-          <p>등록된 가족이 없어요. 가족을 등록해두면 더 안전해요.</p>
-          <BaseButton variant="ghost" block @click="router.push(routePaths.settings)"
-            >가족 등록하러 가기</BaseButton
-          >
+          </div>
         </div>
       </div>
 
@@ -223,7 +228,14 @@ onMounted(async () => {
   background: transparent;
   color: inherit;
   font: inherit;
+  line-height: 1;
   cursor: pointer;
+}
+
+.fraud-header__button > svg {
+  display: block;
+  flex-shrink: 0;
+  transform: translateY(1px);
 }
 
 .fraud {
@@ -280,6 +292,23 @@ onMounted(async () => {
   font-family: var(--font-body);
   font-size: var(--text-lg);
   font-weight: 800;
+}
+
+.fraud__family-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.fraud__family-section > h2 {
+  padding-left: var(--space-1);
+  font-family: var(--font-body);
+  font-size: var(--text-lg);
+  font-weight: 800;
+}
+
+.fraud__card--guardian {
+  padding-block: var(--space-4);
 }
 
 .fraud__phrases,
@@ -382,6 +411,24 @@ onMounted(async () => {
   font-weight: 800;
 }
 
+.fraud__guardian-heading {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  line-height: 1.4;
+}
+
+.fraud__guardian-relation {
+  padding: 1px 6px;
+  border-radius: var(--radius-pill);
+  background: var(--color-yellow-light);
+  color: var(--color-accent-deep);
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
 .fraud__guardian-info small {
   color: var(--color-ink-soft);
   font-size: var(--text-sm);
@@ -396,9 +443,14 @@ onMounted(async () => {
   height: 40px;
   border: 0;
   border-radius: var(--radius-pill);
-  background: var(--color-yellow-light);
-  color: var(--color-accent-deep);
+  background: transparent;
+  color: var(--color-ink-muted);
   cursor: pointer;
+}
+
+.fraud__call-button:hover {
+  background: var(--color-surface-alt);
+  color: var(--color-ink-soft);
 }
 
 .fraud__empty {

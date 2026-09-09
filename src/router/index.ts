@@ -2,7 +2,13 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { getAccessToken } from '@/api/client'
 import { routePaths } from './routePaths'
 
-const publicPaths: string[] = [routePaths.login, routePaths.smsVerify, routePaths.guardianRegister]
+const publicPaths: string[] = [
+  routePaths.login,
+  routePaths.smsVerify,
+  routePaths.guardianRegister,
+  routePaths.guardianDecline,
+]
+const authEntryPaths: string[] = [routePaths.login, routePaths.smsVerify, routePaths.guardianRegister]
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -21,6 +27,11 @@ const router = createRouter({
       path: routePaths.guardianRegister,
       name: 'guardian-register',
       component: () => import('@/views/login/GuardianRegisterView.vue'),
+    },
+    {
+      path: routePaths.guardianDecline,
+      name: 'guardian-decline',
+      component: () => import('@/views/GuardianDeclineView.vue'),
     },
     {
       path: routePaths.home,
@@ -116,7 +127,7 @@ router.beforeEach((to) => {
     return { path: routePaths.login }
   }
 
-  if (isAuthenticated && isPublicPath) {
+  if (isAuthenticated && authEntryPaths.includes(to.path)) {
     return { path: routePaths.home }
   }
 })

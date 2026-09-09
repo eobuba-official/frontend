@@ -11,7 +11,9 @@ import {
   UserRoundPlus,
 } from '@lucide/vue'
 import AppScreen from '@/components/common/AppScreen.vue'
+import BaseButton from '@/components/common/BaseButton.vue'
 import BottomTabBar from '@/components/common/BottomTabBar.vue'
+import ConfirmModal from '@/components/common/ConfirmModal.vue'
 import InfoCard from '@/components/common/InfoCard.vue'
 import { consultationService } from '@/services/consultationService'
 import type { ConsultationHistoryItem, ConsultationStatus } from '@/api/types'
@@ -36,6 +38,7 @@ const activeTab = ref<TabKey>('CONFIRMED')
 const transitionName = ref<'history-slide-forward' | 'history-slide-back'>('history-slide-forward')
 const expandedTabs = ref<Set<TabKey>>(new Set())
 const selectedMonth = ref(new Date(today.getFullYear(), today.getMonth(), 1))
+const selectedHistoryItem = ref<ConsultationHistoryItem | null>(null)
 
 function taskLabel(taskTypeCode: string | null) {
   if (!taskTypeCode) return '업무 확정'
@@ -51,12 +54,25 @@ function taskIcon(taskTypeCode: string | null) {
   return Landmark
 }
 
+function historyTitle(item: ConsultationHistoryItem) {
+  return item.status === 'TASK_CONFIRMED' ? taskLabel(item.taskTypeCode) : '요청 확인 필요'
+}
+
 function formatDate(value: string) {
   return new Intl.DateTimeFormat('ko-KR', { month: 'long', day: 'numeric' }).format(new Date(value))
 }
 
 function formatTime(value: string) {
   return new Intl.DateTimeFormat('ko-KR', { hour: 'numeric', minute: '2-digit' }).format(new Date(value))
+}
+
+function formatDetailDate(value: string) {
+  return new Intl.DateTimeFormat('ko-KR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    weekday: 'short',
+  }).format(new Date(value))
 }
 
 function sortByDateDesc(list: ConsultationHistoryItem[]) {
@@ -122,8 +138,8 @@ const emptyMessage = computed(() =>
 
 const tabDescription = computed(() =>
   activeTab.value === 'CONFIRMED'
-    ? '어떤 업무인지 확인된 상담이에요'
-    : '업무를 정확히 확인하지 못한 상담이에요',
+    ? '어떤 업무인지 확인된 요청이에요'
+    : '업무를 정확히 확인하지 못한 요청이에요',
 )
 
 function selectTab(tab: TabKey) {
@@ -139,6 +155,14 @@ function expandCurrentTab() {
   expandedTabs.value = new Set(expandedTabs.value).add(activeTab.value)
 }
 
+function openHistoryDetail(item: ConsultationHistoryItem) {
+  selectedHistoryItem.value = item
+}
+
+function closeHistoryDetail() {
+  selectedHistoryItem.value = null
+}
+
 onMounted(async () => {
   try {
     const [historyResult, taskTypes] = await Promise.all([
@@ -151,7 +175,7 @@ onMounted(async () => {
       taskTypes.map((taskType) => [taskType.taskTypeCode, taskType.name]),
     )
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '상담 내역을 불러오지 못했어요.'
+    errorMessage.value = error instanceof Error ? error.message : '이용 내역을 불러오지 못했어요.'
   } finally {
     isLoading.value = false
   }
@@ -162,8 +186,8 @@ onMounted(async () => {
   <AppScreen no-top-padding flush-footer>
     <div class="history">
       <header class="history__header">
-        <h1>상담 내역</h1>
-        <p>말씀하신 내용을 모두 기록했어요</p>
+        <h1>이용 내역</h1>
+        <p>말씀하신 은행 업무 요청을 모아보세요</p>
       </header>
 
       <div class="history__month-nav">
@@ -189,12 +213,12 @@ onMounted(async () => {
 
       <InfoCard
         v-else-if="items.length === 0"
-        title="아직 상담 내역이 없어요"
-        description="말씀하시면 여기에 기록이 남아요."
+        title="아직 이용 내역이 없어요"
+        description="은행 업무를 말씀하시면 여기에 기록이 남아요."
       />
 
       <template v-else>
-        <div class="history__stats" role="tablist" aria-label="상담 내역 필터">
+        <div class="history__stats" role="tablist" aria-label="이용 내역 필터">
           <button
             v-for="tab in tabOptions"
             :key="tab.key"
@@ -221,33 +245,55 @@ onMounted(async () => {
             </p>
 
             <div v-else :key="activeTab" class="history-tab-panel">
+              <p class="history-tab-panel__desc">
+                <span
+                  :class="`history-tab-panel__dot--${activeTab === 'CONFIRMED' ? 'confirmed' : 'needsCheck'}`"
+                  aria-hidden="true"
+                ></span>
+                {{ tabDescription }}
+              </p>
               <div class="history-card">
-                <div
+                <button
                   v-for="item in visibleItems"
                   :key="item.consultationId"
+                  type="button"
                   class="history-row"
-                  :class="`history-row--${activeTab === 'CONFIRMED' ? 'confirmed' : 'needsCheck'}`"
+                  :class="[
+                    `history-row--${activeTab === 'CONFIRMED' ? 'confirmed' : 'needsCheck'}`,
+                    'history-row--clickable',
+                  ]"
+                  :aria-label="`${item.correctedUtterance} 상세 보기`"
+                  @click="openHistoryDetail(item)"
                 >
-                  <template v-if="activeTab === 'CONFIRMED'">
-                    <p class="history-row__badge history-row__badge--confirmed">
-                      <component :is="taskIcon(item.taskTypeCode)" :size="14" :stroke-width="2.4" />
-                      {{ taskLabel(item.taskTypeCode) }}
-                    </p>
-                  </template>
-                  <template v-else>
-                    <p class="history-row__badge history-row__badge--needsCheck">
-                      <HelpCircle :size="14" :stroke-width="2.4" />
-                      {{ NEEDS_CHECK_REASON }}
-                    </p>
-                  </template>
+                  <span class="history-row__main">
+                    <span
+                      class="history-row__icon"
+                      :class="`history-row__icon--${activeTab === 'CONFIRMED' ? 'confirmed' : 'needsCheck'}`"
+                      aria-hidden="true"
+                    >
+                      <component
+                        :is="activeTab === 'CONFIRMED' ? taskIcon(item.taskTypeCode) : HelpCircle"
+                        :size="21"
+                        :stroke-width="2.25"
+                      />
+                    </span>
 
-                  <strong class="history-row__headline">{{ item.correctedUtterance }}</strong>
+                    <span class="history-row__content">
+                      <strong class="history-row__headline">{{ item.correctedUtterance }}</strong>
+                    </span>
 
-                  <div class="history-row__meta">
-                    <span class="history-row__date">{{ formatDate(item.createdAt) }}</span>
-                    <span class="history-row__time">{{ formatTime(item.createdAt) }}</span>
-                  </div>
-                </div>
+                    <ChevronRight
+                      class="history-row__chevron"
+                      :size="20"
+                      :stroke-width="2.2"
+                      aria-hidden="true"
+                    />
+                  </span>
+
+                  <span class="history-row__meta">
+                    {{ formatDate(item.createdAt) }} · {{ formatTime(item.createdAt) }}
+                  </span>
+                </button>
 
                 <button
                   v-if="hasMore"
@@ -268,6 +314,60 @@ onMounted(async () => {
       <BottomTabBar />
     </template>
   </AppScreen>
+
+  <ConfirmModal
+    v-if="selectedHistoryItem"
+    title="이용 내역 상세"
+    single-action
+    @close="closeHistoryDetail"
+  >
+    <div class="history-detail">
+      <div
+        class="history-detail__task"
+        :class="`history-detail__task--${selectedHistoryItem.status === 'TASK_CONFIRMED' ? 'confirmed' : 'needsCheck'}`"
+      >
+        <span
+          class="history-detail__icon"
+          :class="`history-detail__icon--${selectedHistoryItem.status === 'TASK_CONFIRMED' ? 'confirmed' : 'needsCheck'}`"
+          aria-hidden="true"
+        >
+          <component
+            :is="selectedHistoryItem.status === 'TASK_CONFIRMED' ? taskIcon(selectedHistoryItem.taskTypeCode) : HelpCircle"
+            :size="22"
+            :stroke-width="2.3"
+          />
+        </span>
+        <div>
+          <span class="history-detail__label">
+            {{ selectedHistoryItem.status === 'TASK_CONFIRMED' ? '확정 업무' : '확인 상태' }}
+          </span>
+          <strong>{{ historyTitle(selectedHistoryItem) }}</strong>
+        </div>
+      </div>
+
+      <dl class="history-detail__list">
+        <div v-if="selectedHistoryItem.status !== 'TASK_CONFIRMED'">
+          <dt>확인이 필요한 이유</dt>
+          <dd>{{ NEEDS_CHECK_REASON }}</dd>
+        </div>
+        <div>
+          <dt>말씀하신 요청</dt>
+          <dd>{{ selectedHistoryItem.correctedUtterance }}</dd>
+        </div>
+        <div>
+          <dt>기록 일시</dt>
+          <dd>
+            {{ formatDetailDate(selectedHistoryItem.createdAt) }}
+            {{ formatTime(selectedHistoryItem.createdAt) }}
+          </dd>
+        </div>
+      </dl>
+    </div>
+
+    <template #actions>
+      <BaseButton block @click="closeHistoryDetail">확인했어요</BaseButton>
+    </template>
+  </ConfirmModal>
 </template>
 
 <style scoped>
@@ -442,35 +542,81 @@ onMounted(async () => {
 }
 
 .history-tab-panel__desc {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-1);
   color: var(--color-ink-soft);
   font-size: var(--text-sm);
   font-weight: 600;
 }
 
+.history-tab-panel__desc > span {
+  width: 7px;
+  height: 7px;
+  border-radius: var(--radius-pill);
+}
+
+.history-tab-panel__dot--confirmed {
+  background: var(--color-accent);
+}
+
+.history-tab-panel__dot--needsCheck {
+  background: var(--color-alert);
+}
+
 .history-card {
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-lg);
-  background: var(--color-surface);
-  overflow: hidden;
+  gap: var(--space-3);
 }
 
 .history-row {
   display: flex;
   flex-direction: column;
-  padding: var(--space-4);
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-4) var(--space-4) var(--space-3);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  font: inherit;
+  text-align: left;
+  box-shadow: var(--shadow-card);
 }
 
 .history-row + .history-row {
   border-top: 1px solid var(--color-line);
 }
 
+.history-row--clickable {
+  cursor: pointer;
+  transition: background-color 160ms ease;
+}
+
+.history-row--clickable:hover,
+.history-row--clickable:focus-visible {
+  background: var(--color-yellow-faint);
+  border-color: #f6d978;
+  transform: translateY(-1px);
+}
+
+.history-row--needsCheck.history-row--clickable:hover,
+.history-row--needsCheck.history-row--clickable:focus-visible {
+  background: var(--color-alert-bg);
+  border-color: var(--color-alert-line);
+}
+
+.history-row--clickable:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: -2px;
+}
+
 .history-card__more {
   padding: var(--space-3);
-  border: 0;
-  border-top: 1px solid var(--color-line);
-  background: var(--color-surface-alt);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
   color: var(--color-ink-soft);
   font: inherit;
   font-size: var(--text-sm);
@@ -479,53 +625,143 @@ onMounted(async () => {
   cursor: pointer;
 }
 
-.history-row__badge {
-  display: inline-flex;
-  align-self: flex-start;
+.history-row__main {
+  display: flex;
   align-items: center;
-  gap: var(--space-1);
-  padding: 3px var(--space-3);
-  border-radius: var(--radius-pill);
-  font-size: var(--text-sm);
-  font-weight: 700;
+  gap: var(--space-3);
 }
 
-.history-row__badge--confirmed {
-  background: var(--color-confirmed-bg);
-  color: var(--color-confirmed);
+.history-row__icon {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
 }
 
-.history-row__badge--needsCheck {
+.history-row__icon--confirmed {
+  background: var(--color-yellow-faint);
+  color: var(--color-accent-deep);
+}
+
+.history-row__icon--needsCheck {
   background: var(--color-alert-bg);
   color: var(--color-alert);
 }
 
+.history-row__content {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+
 .history-row__headline {
-  margin-top: var(--space-2);
+  display: -webkit-box;
+  overflow: hidden;
   color: var(--color-ink);
   font-size: var(--text-lg);
-  font-weight: 800;
+  font-weight: 900;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.history-row__chevron {
+  flex-shrink: 0;
+  color: var(--color-ink-faint);
 }
 
 .history-row__meta {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-top: var(--space-2);
-}
-
-.history-row__date {
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-line);
   color: var(--color-ink-soft);
   font-size: var(--text-sm);
   font-weight: 600;
 }
 
-.history-row__time {
-  padding: 2px var(--space-2);
+.history-detail {
+  display: grid;
+  gap: var(--space-4);
+  margin-top: var(--space-5);
+}
+
+.history-detail__task {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-md);
+}
+
+.history-detail__task--confirmed {
+  background: var(--color-yellow-faint);
+}
+
+.history-detail__task--needsCheck {
+  background: var(--color-alert-bg);
+}
+
+.history-detail__icon {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 44px;
+  height: 44px;
   border-radius: var(--radius-pill);
-  background: var(--color-surface-alt);
+  background: var(--color-surface);
+}
+
+.history-detail__icon--confirmed {
+  color: var(--color-accent-deep);
+}
+
+.history-detail__icon--needsCheck {
+  color: var(--color-alert);
+}
+
+.history-detail__task > div {
+  display: grid;
+  gap: 2px;
+}
+
+.history-detail__label,
+.history-detail__list dt {
   color: var(--color-ink-soft);
   font-size: var(--text-sm);
   font-weight: 700;
+}
+
+.history-detail__task strong {
+  color: var(--color-ink);
+  font-size: var(--text-lg);
+  font-weight: 900;
+}
+
+.history-detail__list {
+  display: grid;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.history-detail__list > div {
+  display: grid;
+  gap: var(--space-1);
+  padding: var(--space-4);
+}
+
+.history-detail__list > div + div {
+  border-top: 1px solid var(--color-line);
+}
+
+.history-detail__list dd {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: var(--text-base);
+  font-weight: 700;
+  line-height: 1.55;
 }
 </style>

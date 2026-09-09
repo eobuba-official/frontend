@@ -185,7 +185,7 @@ describe('consultationFlow store', () => {
     expect(store.correctedUtterance).toBe('')
   })
 
-  it('overwrites the task and visit decision after a candidate is selected, and clears the candidate list', () => {
+  it('overwrites the task and visit decision after a candidate is selected, and keeps the candidate list', () => {
     const store = useConsultationFlowStore()
     store.setAnalyzeResult(candidatesResult)
     expect(store.candidates).toHaveLength(2)
@@ -195,7 +195,8 @@ describe('consultationFlow store', () => {
 
     expect(store.task?.taskTypeCode).toBe('CARD_REISSUE')
     expect(store.visitDecision?.decision).toBe('CHECK_NEEDED')
-    expect(store.candidates).toEqual([])
+    // kept so navigating back to the task-selection screen still renders its options
+    expect(store.candidates).toHaveLength(2)
     expect(store.confidence).toBeNull()
   })
 
@@ -226,7 +227,8 @@ describe('consultationFlow store', () => {
       },
       expectedWaitMinutes: 5,
       congestionSource: 'MOCK',
-      score: 90,
+      walkMinutes: 15,
+      totalMinutes: 20,
       sentence: '내일 오전 10시가 좋아요',
     }
 

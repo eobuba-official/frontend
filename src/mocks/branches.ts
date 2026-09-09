@@ -1,11 +1,9 @@
 import type { Branch } from '@/api/types'
 
-// TEMPORARY: stand-in for a not-yet-built "nearby branches" backend endpoint
-// (/branches/recommendations needs a real consultationId, so it can't serve this
-// standalone map tab). Positions are offsets from wherever the viewer actually is,
-// not fixed real addresses, so the demo always shows pins near the current user
-// instead of only working in central Seoul. Swap for a real API call once that
-// endpoint exists — output shape matches `Branch` exactly.
+// FALLBACK: used by BranchExploreView only if GET /branches/nearby errors out (the
+// endpoint itself is live now). Positions are offsets from wherever the viewer
+// actually is, not fixed real addresses, so the demo always shows pins near the
+// current user instead of only working in central Seoul.
 
 interface MockBranchTemplate {
   branchId: number

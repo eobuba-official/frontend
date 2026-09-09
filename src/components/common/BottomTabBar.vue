@@ -10,7 +10,7 @@ const router = useRouter()
 const tabs = [
   { key: 'home', label: '홈', icon: Home, path: routePaths.home },
   { key: 'map', label: '지도', icon: MapPin, path: routePaths.branchExplore },
-  { key: 'history', label: '상담내역', icon: ScrollText, path: routePaths.history },
+  { key: 'history', label: '이용내역', icon: ScrollText, path: routePaths.history },
   { key: 'mypage', label: '마이페이지', icon: User, path: routePaths.settings },
 ]
 

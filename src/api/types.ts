@@ -54,12 +54,14 @@ export interface User {
 }
 
 export type GuardianRelation = '아들' | '딸' | '배우자' | '기타'
+export type GuardianStatus = 'ACTIVE' | 'DECLINED'
 
 export interface Guardian {
   guardianId?: number
   name: string
   phoneNumber: string
   relation: GuardianRelation
+  status?: GuardianStatus
 }
 
 export interface SmsRequest {
@@ -106,6 +108,22 @@ export interface GuardianAddRequest {
 export interface GuardianAddResult {
   guardian: Guardian
   guardianCount: number
+  mockNotification: string | null
+}
+
+export interface GuardianDeclineInfoResult {
+  userName: string
+  guardianName: string
+  relation: string
+  status: GuardianStatus
+}
+
+export interface GuardianDeclineRequest {
+  token: string
+}
+
+export interface GuardianDeclineResult {
+  status: GuardianStatus
 }
 
 export interface GuardianDeleteResult {
@@ -258,14 +276,11 @@ export interface BranchRecommendationQuery {
   limit?: number
 }
 
-export type CongestionSource = 'MOCK' | 'FALLBACK' | 'SEOUL_RTD'
+export type CongestionSource = 'MOCK' | 'FALLBACK'
 
 export interface BranchRecommendationResult {
   recommendations: BranchRecommendation[]
-  weights: {
-    wait: number
-    distance: number
-  }
+  walkingSpeedKmh: number
 }
 
 export interface BranchRecommendation {
@@ -274,7 +289,8 @@ export interface BranchRecommendation {
   visitTime: VisitTime
   expectedWaitMinutes: number
   congestionSource: CongestionSource
-  score: number
+  walkMinutes: number | null
+  totalMinutes: number
   sentence: string
 }
 
@@ -293,6 +309,29 @@ export interface VisitTime {
   dayLabel: string
   timeSlot: string
   timeLabel: string
+}
+
+// GET /branches/nearby — no consultationId needed, unlike /branches/recommendations.
+// Server applies its own radius (piggyback.recommendation.search-radius-km, 10km
+// default) and result cap (limit param, 1-20, default 5) — there's no radiusKm param.
+// Does NOT include wait time: the congestion lookup only runs inside the
+// consultationId-gated recommendation flow, so walkMinutes is the only timing field
+// here. See src/mocks/branches.ts for the client-side fallback used if this call fails.
+export interface NearbyBranchQuery {
+  lat?: number
+  lng?: number
+  regionCode?: string
+  taskTypeCode?: string
+  limit?: number
+}
+
+export interface NearbyBranch extends Branch {
+  walkMinutes: number | null
+}
+
+export interface NearbyBranchResult {
+  branches: NearbyBranch[]
+  walkingSpeedKmh: number
 }
 
 export interface ConsultationHistoryResult {

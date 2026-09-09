@@ -1,16 +1,15 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { Clock, Phone, X } from '@lucide/vue'
+import { Clock, Phone } from '@lucide/vue'
 import { useRouter } from 'vue-router'
 import AppScreen from '@/components/common/AppScreen.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import FlowHeader from '@/components/common/FlowHeader.vue'
+import MapBottomSheet from '@/components/common/MapBottomSheet.vue'
 import MapLoadingOverlay from '@/components/common/MapLoadingOverlay.vue'
 import MapLocateButton from '@/components/common/MapLocateButton.vue'
-import kbLogo from '@/assets/img/kb.png'
 import { routePaths } from '@/router/routePaths'
 import { useConsultationFlowStore } from '@/stores/consultationFlow'
-import { useBranchSheet } from '@/composables/useBranchSheet'
 import { branchMarkerImage, centerAboveSheet, myLocationMarkerImage } from '@/utils/branchMarkers'
 import { loadKakaoMaps } from '@/utils/kakaoMaps'
 import type { KakaoMap, KakaoMarker } from '@/utils/kakaoMaps'
@@ -117,17 +116,24 @@ watch(selectedRank, () => {
   })
 })
 
-const { sheetEl, sheetHeight } = useBranchSheet(
-  () => selected.value,
-  (item, heightPx) => {
-    if (!map) return
-    const maps = window.kakao?.maps
-    if (!maps) return
-    centerAboveSheet(map, maps, new maps.LatLng(item.branch.lat, item.branch.lng), heightPx)
-  },
-)
+const sheetHeight = ref(0)
 
 const locateBtnOffset = computed(() => (selected.value ? sheetHeight.value + BUTTON_SHEET_GAP : 0))
+
+const sheetMetaLines = computed(() => {
+  const item = selected.value
+  if (!item) return []
+  const distance = item.branch.distanceKm != null ? `${item.branch.distanceKm}km · ` : ''
+  return [`${distance}${item.branch.address}`]
+})
+
+function centerMapAboveSheet(heightPx: number) {
+  const item = selected.value
+  if (!item || !map) return
+  const maps = window.kakao?.maps
+  if (!maps) return
+  centerAboveSheet(map, maps, new maps.LatLng(item.branch.lat, item.branch.lng), heightPx)
+}
 
 function recenterOnMe() {
   if (!map || !myLocationMarker) return
@@ -166,31 +172,21 @@ onMounted(initMap)
 
       <MapLocateButton :disabled="!hasMyLocation" :offset="locateBtnOffset" @click="recenterOnMe" />
 
-      <Transition name="branch-sheet">
-        <article v-if="selected" ref="sheetEl" class="selected-branch">
-          <button type="button" class="selected-branch__close" aria-label="닫기" @click="closeSheet">
-            <X :size="18" :stroke-width="2.4" />
-          </button>
+      <MapBottomSheet
+        :sheet-key="selected?.rank ?? null"
+        :title="selected?.branch.name ?? ''"
+        :meta-lines="sheetMetaLines"
+        @close="closeSheet"
+        @measure="sheetHeight = $event"
+        @opened="centerMapAboveSheet"
+      >
+        <p v-if="selected" class="selected-branch__wait">
+          <Clock :size="16" :stroke-width="2.2" />
+          {{ selected.visitTime.dayLabel }} {{ selected.visitTime.timeLabel }} · 대기
+          {{ selected.expectedWaitMinutes }}분
+        </p>
 
-          <div class="selected-branch__header">
-            <span class="selected-branch__icon">
-              <img :src="kbLogo" alt="" />
-            </span>
-            <div class="selected-branch__info">
-              <h2>{{ selected.branch.name }}</h2>
-              <p class="selected-branch__meta">
-                <template v-if="selected.branch.distanceKm != null">{{ selected.branch.distanceKm }}km · </template>
-                {{ selected.branch.address }}
-              </p>
-            </div>
-          </div>
-
-          <p class="selected-branch__wait">
-            <Clock :size="16" :stroke-width="2.2" />
-            {{ selected.visitTime.dayLabel }} {{ selected.visitTime.timeLabel }} · 대기
-            {{ selected.expectedWaitMinutes }}분
-          </p>
-
+        <template #actions>
           <div class="selected-branch__actions">
             <button
               class="selected-branch__call"
@@ -202,8 +198,8 @@ onMounted(initMap)
             </button>
             <BaseButton @click="selectBranch">이 지점 선택</BaseButton>
           </div>
-        </article>
-      </Transition>
+        </template>
+      </MapBottomSheet>
     </div>
   </AppScreen>
 </template>
@@ -240,77 +236,6 @@ onMounted(initMap)
   color: var(--color-alert);
 }
 
-.selected-branch {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  z-index: 3;
-  padding: var(--space-5) var(--screen-padding-x) calc(var(--space-5) + env(safe-area-inset-bottom, 0px));
-  border-radius: 24px 24px 0 0;
-  background: var(--color-surface);
-  border: 1px solid var(--color-line);
-  border-bottom: 0;
-}
-
-.selected-branch__close {
-  position: absolute;
-  top: var(--space-4);
-  right: var(--space-4);
-  display: grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
-  border: 0;
-  border-radius: var(--radius-pill);
-  background: var(--color-surface-alt);
-  color: var(--color-ink-soft);
-  cursor: pointer;
-}
-
-.selected-branch__header {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-}
-
-.selected-branch__icon {
-  display: grid;
-  flex-shrink: 0;
-  place-items: center;
-  width: 48px;
-  height: 48px;
-  overflow: hidden;
-  border-radius: var(--radius-md);
-  background: var(--color-yellow-light);
-}
-
-.selected-branch__icon img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.selected-branch__info {
-  flex: 1;
-  min-width: 0;
-}
-
-.selected-branch h2 {
-  padding-right: var(--space-8);
-  color: var(--color-ink);
-  font-family: var(--font-body);
-  font-size: var(--text-xl);
-  font-weight: 900;
-}
-
-.selected-branch__meta {
-  margin-top: var(--space-1);
-  color: var(--color-ink-soft);
-  font-size: var(--text-base);
-  font-weight: 600;
-}
-
 .selected-branch__wait {
   display: flex;
   align-items: center;
@@ -343,15 +268,5 @@ onMounted(initMap)
 
 .selected-branch__actions .base-button {
   flex: 1;
-}
-
-.branch-sheet-enter-active,
-.branch-sheet-leave-active {
-  transition: transform 220ms cubic-bezier(0.65, 0, 0.35, 1);
-}
-
-.branch-sheet-enter-from,
-.branch-sheet-leave-to {
-  transform: translateY(100%);
 }
 </style>

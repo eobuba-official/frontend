@@ -27,8 +27,8 @@ function goBack() {
   <div class="flow-header">
     <div class="flow-header__top">
       <button class="flow-header__button" type="button" @click="goBack">
-        <ChevronLeft :size="18" :stroke-width="2.4" />
-        뒤로
+        <ChevronLeft :size="18" :stroke-width="2.4" aria-hidden="true" />
+        <span>뒤로</span>
       </button>
       <span class="flow-header__step">
         {{ current }} / {{ total }}
@@ -75,7 +75,14 @@ function goBack() {
   background: transparent;
   color: inherit;
   font: inherit;
+  line-height: 1;
   cursor: pointer;
+}
+
+.flow-header__button > svg {
+  display: block;
+  flex-shrink: 0;
+  transform: translateY(1px);
 }
 
 .flow-header__button--home {

@@ -1,23 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { Plus, Trash2, User } from '@lucide/vue'
+import { MessageSquareText, Plus, Trash2, User } from '@lucide/vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import ConfirmModal from '@/components/common/ConfirmModal.vue'
 import PhoneNumberField from '@/components/common/PhoneNumberField.vue'
 import { authService } from '@/services/authService'
 import type { Guardian, GuardianRelation } from '@/api/types'
 
-interface RelationOption {
-  label: string
-  value: GuardianRelation
-}
-
-const relations: RelationOption[] = [
-  { label: '아들', value: '아들' },
-  { label: '딸', value: '딸' },
-  { label: '배우자', value: '배우자' },
-  { label: '보호자', value: '기타' },
-]
+const relations: GuardianRelation[] = ['아들', '딸', '배우자', '기타']
 
 const guardians = ref<Guardian[]>([])
 const isLoadingGuardians = ref(true)
@@ -29,26 +19,32 @@ const newGuardianPhoneDigits = ref('')
 const newGuardianRelation = ref<GuardianRelation>('아들')
 const isAddingGuardian = ref(false)
 const addGuardianError = ref('')
+const isAddConfirmationOpen = ref(false)
+const mockNotification = ref<string | null>(null)
 
 const canAddGuardian = computed(
-  () =>
-    newGuardianName.value.trim().length > 0 &&
-    newGuardianPhoneDigits.value.length === 8 &&
-    !isAddingGuardian.value,
+  () => newGuardianName.value.trim().length > 0 && newGuardianPhoneDigits.value.length === 8 && !isAddingGuardian.value,
+)
+
+const formattedNewGuardianPhone = computed(() => formatPhone(`010${newGuardianPhoneDigits.value}`))
+const addConfirmationDescription = computed(
+  () => `${newGuardianName.value.trim()}님 · ${newGuardianRelation.value}\n${formattedNewGuardianPhone.value}`,
 )
 
 const pendingDeleteGuardian = ref<Guardian | null>(null)
 const isDeletingGuardian = ref(false)
 const deleteGuardianError = ref('')
+const deleteGuardianDescription = computed(() => {
+  const guardian = pendingDeleteGuardian.value
+  if (!guardian) return ''
+  if (guardians.value.length === 1) {
+    return '등록을 해제하면 알림을 받을 가족이 없어져요.\n수상한 전화가 감지되어도 가족에게 알릴 수 없어요.'
+  }
+  return `등록을 해제하면 ${guardian.name}님에게\n수상한 전화 알림을 더 이상 보내지 않아요.`
+})
 
 function formatPhone(phoneNumber: string) {
-  return phoneNumber.length === 11
-    ? `${phoneNumber.slice(0, 3)}-${phoneNumber.slice(3, 7)}-${phoneNumber.slice(7)}`
-    : phoneNumber
-}
-
-function formatRelation(relation: GuardianRelation) {
-  return relation === '기타' ? '보호자' : relation
+  return phoneNumber.length === 11 ? `${phoneNumber.slice(0, 3)}-${phoneNumber.slice(3, 7)}-${phoneNumber.slice(7)}` : phoneNumber
 }
 
 onMounted(async () => {
@@ -74,7 +70,23 @@ function closeAddGuardian() {
   isAddGuardianOpen.value = false
 }
 
-async function submitAddGuardian() {
+function submitAddGuardian() {
+  if (!canAddGuardian.value) return
+  isAddGuardianOpen.value = false
+  isAddConfirmationOpen.value = true
+}
+
+function cancelAddConfirmation() {
+  if (isAddingGuardian.value) return
+  isAddConfirmationOpen.value = false
+  isAddGuardianOpen.value = true
+}
+
+function closeNotificationModal() {
+  mockNotification.value = null
+}
+
+async function confirmAddGuardian() {
   if (!canAddGuardian.value) return
 
   isAddingGuardian.value = true
@@ -87,10 +99,13 @@ async function submitAddGuardian() {
       relation: newGuardianRelation.value,
     })
     guardians.value = [...guardians.value, result.guardian]
-    isAddGuardianOpen.value = false
+    isAddConfirmationOpen.value = false
+    mockNotification.value = result.mockNotification
+    newGuardianName.value = ''
+    newGuardianPhoneDigits.value = ''
+    newGuardianRelation.value = '아들'
   } catch (error) {
-    addGuardianError.value =
-      error instanceof Error ? error.message : '가족을 추가하지 못했어요. 다시 시도해 주세요.'
+    addGuardianError.value = error instanceof Error ? error.message : '가족을 추가하지 못했어요. 다시 시도해 주세요.'
   } finally {
     isAddingGuardian.value = false
   }
@@ -117,8 +132,7 @@ async function confirmDeleteGuardian() {
     guardians.value = guardians.value.filter((item) => item.guardianId !== guardian.guardianId)
     pendingDeleteGuardian.value = null
   } catch (error) {
-    deleteGuardianError.value =
-      error instanceof Error ? error.message : '삭제하지 못했어요. 다시 시도해 주세요.'
+    deleteGuardianError.value = error instanceof Error ? error.message : '가족 등록을 해제하지 못했어요. 다시 시도해 주세요.'
   } finally {
     isDeletingGuardian.value = false
   }
@@ -130,42 +144,39 @@ async function confirmDeleteGuardian() {
     <p class="settings-group__label">가족 관리</p>
     <div class="settings-card">
       <p v-if="isLoadingGuardians" class="settings-status">불러오는 중...</p>
-      <p v-else-if="guardiansError" class="settings-status settings-status--error">
-        {{ guardiansError }}
-      </p>
+      <p v-else-if="guardiansError" class="settings-status settings-status--error">{{ guardiansError }}</p>
       <p v-else-if="guardians.length === 0" class="settings-status">
         등록된 가족이 없어요. 수상한 전화가 감지돼도 알려드릴 수 없어요.
       </p>
       <template v-else>
-        <template
-          v-for="(guardian, index) in guardians"
-          :key="guardian.guardianId ?? guardian.phoneNumber"
-        >
+        <template v-for="(guardian, index) in guardians" :key="guardian.guardianId ?? guardian.phoneNumber">
           <div class="settings-row settings-row--static">
             <span class="settings-row__icon" aria-hidden="true">
               <User :size="20" :stroke-width="2.2" />
             </span>
             <span class="settings-row__copy">
-              <strong>
-                {{ guardian.name }}
-                <span class="guardian-relation-badge">{{ formatRelation(guardian.relation) }}</span>
+              <strong class="guardian-heading">
+                <span>{{ guardian.name }}</span>
+                <span class="guardian-relation-badge">{{ guardian.relation }}</span>
+                <span v-if="guardian.status === 'DECLINED'" class="guardian-status-badge">
+                  수신 거부
+                </span>
               </strong>
               <small>{{ formatPhone(guardian.phoneNumber) }}</small>
+              <small v-if="guardian.status === 'DECLINED'" class="guardian-status-text">
+                알림 수신을 거부했어요
+              </small>
             </span>
             <button
               class="settings-row__delete"
               type="button"
-              :aria-label="`${guardian.name} 삭제`"
+              :aria-label="`${guardian.name}님 가족 등록 해제`"
               @click="requestDeleteGuardian(guardian)"
             >
               <Trash2 :size="18" :stroke-width="2.2" />
             </button>
           </div>
-          <div
-            v-if="index < guardians.length - 1"
-            class="settings-row-divider"
-            aria-hidden="true"
-          ></div>
+          <div v-if="index < guardians.length - 1" class="settings-row-divider" aria-hidden="true"></div>
         </template>
       </template>
     </div>
@@ -177,8 +188,8 @@ async function confirmDeleteGuardian() {
 
   <ConfirmModal
     v-if="isAddGuardianOpen"
-    title="가족을 추가해 주세요"
-    description="수상한 전화가 감지되면 이 분께 바로 알려드려요."
+    title="알림을 받을 가족을 추가해 주세요"
+    :description="'수상한 전화가 감지되면\n등록한 가족에게 알림을 보내드려요.'"
     @close="closeAddGuardian"
   >
     <label class="modal-field" for="new-guardian-name">
@@ -196,17 +207,17 @@ async function confirmDeleteGuardian() {
     </div>
 
     <div class="modal-relation">
-      <span>어떤 사이신가요</span>
+      <span>나와 어떤 사이인가요?</span>
       <div class="modal-relation__options">
         <button
           v-for="option in relations"
-          :key="option.label"
+          :key="option"
           type="button"
           class="relation-chip"
-          :class="{ 'relation-chip--active': newGuardianRelation === option.value }"
-          @click="newGuardianRelation = option.value"
+          :class="{ 'relation-chip--active': newGuardianRelation === option }"
+          @click="newGuardianRelation = option"
         >
-          {{ option.label }}
+          {{ option }}
         </button>
       </div>
     </div>
@@ -222,10 +233,49 @@ async function confirmDeleteGuardian() {
   </ConfirmModal>
 
   <ConfirmModal
+    v-if="isAddConfirmationOpen"
+    role="alertdialog"
+    title="가족 정보를 확인해 주세요"
+    :description="addConfirmationDescription"
+    @close="cancelAddConfirmation"
+  >
+    <p class="modal-guide">입력한 번호로 수상한 전화 알림 안내 문자를 보내드려요.</p>
+    <p v-if="addGuardianError" class="modal-error">{{ addGuardianError }}</p>
+
+    <template #actions>
+      <BaseButton variant="ghost" block :disabled="isAddingGuardian" @click="cancelAddConfirmation">
+        다시 입력
+      </BaseButton>
+      <BaseButton block :disabled="isAddingGuardian" @click="confirmAddGuardian">
+        {{ isAddingGuardian ? '추가하는 중...' : '추가하기' }}
+      </BaseButton>
+    </template>
+  </ConfirmModal>
+
+  <ConfirmModal
+    v-if="mockNotification"
+    title="안내 문자가 준비됐어요"
+    description="시연용으로 실제 발송될 안내 문자 내용을 보여드려요."
+    single-action
+    @close="closeNotificationModal"
+  >
+    <div class="mock-notification">
+      <span class="mock-notification__icon" aria-hidden="true">
+        <MessageSquareText :size="20" :stroke-width="2.2" />
+      </span>
+      <p>{{ mockNotification }}</p>
+    </div>
+
+    <template #actions>
+      <BaseButton block @click="closeNotificationModal">확인했어요</BaseButton>
+    </template>
+  </ConfirmModal>
+
+  <ConfirmModal
     v-if="pendingDeleteGuardian"
     role="alertdialog"
-    :title="`${pendingDeleteGuardian.name}님을 삭제할까요?`"
-    description="삭제하면 수상한 전화가 감지돼도 이 분께는 더 이상 알려드리지 않아요."
+    :title="`${pendingDeleteGuardian.name}님의 가족 등록을 해제할까요?`"
+    :description="deleteGuardianDescription"
     @close="cancelDeleteGuardian"
   >
     <p v-if="deleteGuardianError" class="modal-error">{{ deleteGuardianError }}</p>
@@ -233,7 +283,7 @@ async function confirmDeleteGuardian() {
     <template #actions>
       <BaseButton variant="ghost" block @click="cancelDeleteGuardian">취소</BaseButton>
       <BaseButton block :disabled="isDeletingGuardian" @click="confirmDeleteGuardian">
-        {{ isDeletingGuardian ? '삭제하는 중...' : '삭제하기' }}
+        {{ isDeletingGuardian ? '해제하는 중...' : '등록 해제' }}
       </BaseButton>
     </template>
   </ConfirmModal>
@@ -301,6 +351,14 @@ async function confirmDeleteGuardian() {
   font-weight: 800;
 }
 
+.guardian-heading {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  line-height: 1.4;
+}
+
 .settings-row__copy small {
   color: var(--color-ink-soft);
   font-size: var(--text-sm);
@@ -328,13 +386,27 @@ async function confirmDeleteGuardian() {
 }
 
 .guardian-relation-badge {
-  margin-left: var(--space-2);
-  padding: 2px var(--space-2);
+  padding: 1px 6px;
   border-radius: var(--radius-pill);
   background: var(--color-yellow-light);
   color: var(--color-accent-deep);
-  font-size: var(--text-xs);
+  font-size: 0.65rem;
   font-weight: 700;
+  line-height: 1.4;
+}
+
+.guardian-status-badge {
+  padding: 1px 6px;
+  border-radius: var(--radius-pill);
+  background: var(--color-alert-bg);
+  color: var(--color-alert);
+  font-size: 0.65rem;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.guardian-status-text {
+  color: var(--color-alert);
 }
 
 .settings-row__delete {
@@ -447,5 +519,44 @@ async function confirmDeleteGuardian() {
   margin-top: var(--space-3);
   color: var(--color-alert);
   font-size: var(--text-sm);
+}
+
+.modal-guide {
+  margin-top: var(--space-3);
+  color: var(--color-ink-soft);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+.mock-notification {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+  padding: var(--space-4);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-alt);
+  text-align: left;
+}
+
+.mock-notification__icon {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-pill);
+  background: var(--color-yellow-light);
+  color: var(--color-accent-deep);
+}
+
+.mock-notification p {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 </style>
