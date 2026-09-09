@@ -1,15 +1,22 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { LocateFixed, MapPin, Phone } from '@lucide/vue'
+import { Clock, Phone, X } from '@lucide/vue'
 import { useRouter } from 'vue-router'
 import AppScreen from '@/components/common/AppScreen.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import FlowHeader from '@/components/common/FlowHeader.vue'
+import MapLoadingOverlay from '@/components/common/MapLoadingOverlay.vue'
+import MapLocateButton from '@/components/common/MapLocateButton.vue'
+import kbLogo from '@/assets/img/kb.png'
 import { routePaths } from '@/router/routePaths'
 import { useConsultationFlowStore } from '@/stores/consultationFlow'
+import { useBranchSheet } from '@/composables/useBranchSheet'
+import { branchMarkerImage, centerAboveSheet, myLocationMarkerImage } from '@/utils/branchMarkers'
 import { loadKakaoMaps } from '@/utils/kakaoMaps'
 import type { KakaoMap, KakaoMarker } from '@/utils/kakaoMaps'
 import { isLocationPermissionEnabled } from '@/utils/permissionPreferences'
+
+const BUTTON_SHEET_GAP = 16
 
 const router = useRouter()
 const consultationFlow = useConsultationFlowStore()
@@ -46,29 +53,6 @@ let map: KakaoMap | null = null
 let myLocationMarker: KakaoMarker | null = null
 const markers: { rank: number; marker: KakaoMarker }[] = []
 
-function pinImageSrc() {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="30" height="38" viewBox="0 0 30 38"><path d="M15 0C6.7 0 0 6.7 0 15c0 10.5 15 23 15 23s15-12.5 15-23C30 6.7 23.3 0 15 0z" fill="#e8443f"/><circle cx="15" cy="15" r="6.2" fill="#ffffff"/></svg>`
-  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`
-}
-
-function pinImage(isSelected: boolean) {
-  const maps = window.kakao!.maps
-  const scale = isSelected ? 1.35 : 1
-  const width = Math.round(30 * scale)
-  const height = Math.round(38 * scale)
-  return new maps.MarkerImage(pinImageSrc(), new maps.Size(width, height), {
-    offset: new maps.Point(Math.round(width / 2), height),
-  })
-}
-
-function myLocationImage() {
-  const maps = window.kakao!.maps
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"><circle cx="12" cy="12" r="8" fill="#2f6fed" stroke="#ffffff" stroke-width="3"/></svg>`
-  return new maps.MarkerImage(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`, new maps.Size(24, 24), {
-    offset: new maps.Point(12, 12),
-  })
-}
-
 async function initMap() {
   isLoadingMap.value = true
   mapError.value = ''
@@ -92,7 +76,7 @@ async function initMap() {
     uniqueBranches.value.forEach((item) => {
       const marker = new maps.Marker({
         position: new maps.LatLng(item.branch.lat, item.branch.lng),
-        image: pinImage(item.rank === selectedRank.value),
+        image: branchMarkerImage(maps, item.rank === selectedRank.value),
       })
       marker.setMap(mapInstance)
       maps.event.addListener(marker, 'click', () => {
@@ -101,11 +85,15 @@ async function initMap() {
       markers.push({ rank: item.rank, marker })
     })
 
+    maps.event.addListener(mapInstance, 'click', () => {
+      selectedRank.value = null
+    })
+
     if (isLocationPermissionEnabled() && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           const myPosition = new maps.LatLng(position.coords.latitude, position.coords.longitude)
-          const marker = new maps.Marker({ position: myPosition, image: myLocationImage() })
+          const marker = new maps.Marker({ position: myPosition, image: myLocationMarkerImage(maps) })
           marker.setMap(mapInstance)
           myLocationMarker = marker
           hasMyLocation.value = true
@@ -122,14 +110,32 @@ async function initMap() {
 }
 
 watch(selectedRank, () => {
+  const maps = window.kakao?.maps
+  if (!maps) return
   markers.forEach(({ rank, marker }) => {
-    marker.setImage(pinImage(rank === selectedRank.value))
+    marker.setImage(branchMarkerImage(maps, rank === selectedRank.value))
   })
 })
+
+const { sheetEl, sheetHeight } = useBranchSheet(
+  () => selected.value,
+  (item, heightPx) => {
+    if (!map) return
+    const maps = window.kakao?.maps
+    if (!maps) return
+    centerAboveSheet(map, maps, new maps.LatLng(item.branch.lat, item.branch.lng), heightPx)
+  },
+)
+
+const locateBtnOffset = computed(() => (selected.value ? sheetHeight.value + BUTTON_SHEET_GAP : 0))
 
 function recenterOnMe() {
   if (!map || !myLocationMarker) return
   map.setCenter(myLocationMarker.getPosition())
+}
+
+function closeSheet() {
+  selectedRank.value = null
 }
 
 function selectBranch() {
@@ -155,32 +161,49 @@ onMounted(initMap)
     <div class="branch-map">
       <div ref="mapContainer" class="branch-map__kakao"></div>
 
-      <p v-if="isLoadingMap" class="branch-map__status">지도를 불러오고 있어요...</p>
+      <MapLoadingOverlay v-if="isLoadingMap" />
       <p v-else-if="mapError" class="branch-map__status branch-map__status--error">{{ mapError }}</p>
 
-      <button class="branch-map__locate" type="button" :disabled="!hasMyLocation" @click="recenterOnMe">
-        <LocateFixed :size="22" :stroke-width="2.4" />
-        내 위치
-      </button>
+      <MapLocateButton :disabled="!hasMyLocation" :offset="locateBtnOffset" @click="recenterOnMe" />
 
-      <article v-if="selected" class="selected-branch">
-        <div>
-          <h2>{{ selected.branch.name }}</h2>
-          <p>
-            <MapPin :size="20" :stroke-width="2.2" />
-            <template v-if="selected.branch.distanceKm != null">{{ selected.branch.distanceKm }}km</template>
-            <span></span>
-            {{ selected.branch.address }}
+      <Transition name="branch-sheet">
+        <article v-if="selected" ref="sheetEl" class="selected-branch">
+          <button type="button" class="selected-branch__close" aria-label="닫기" @click="closeSheet">
+            <X :size="18" :stroke-width="2.4" />
+          </button>
+
+          <div class="selected-branch__header">
+            <span class="selected-branch__icon">
+              <img :src="kbLogo" alt="" />
+            </span>
+            <div class="selected-branch__info">
+              <h2>{{ selected.branch.name }}</h2>
+              <p class="selected-branch__meta">
+                <template v-if="selected.branch.distanceKm != null">{{ selected.branch.distanceKm }}km · </template>
+                {{ selected.branch.address }}
+              </p>
+            </div>
+          </div>
+
+          <p class="selected-branch__wait">
+            <Clock :size="16" :stroke-width="2.2" />
+            {{ selected.visitTime.dayLabel }} {{ selected.visitTime.timeLabel }} · 대기
+            {{ selected.expectedWaitMinutes }}분
           </p>
-        </div>
-        <button class="selected-branch__call" type="button" aria-label="지점에 전화하기" @click="callBranch">
-          <Phone :size="26" :stroke-width="2.1" />
-        </button>
 
-        <div class="selected-branch__actions">
-          <BaseButton block @click="selectBranch">이 지점 선택</BaseButton>
-        </div>
-      </article>
+          <div class="selected-branch__actions">
+            <button
+              class="selected-branch__call"
+              type="button"
+              aria-label="지점에 전화하기"
+              @click="callBranch"
+            >
+              <Phone :size="22" :stroke-width="2.1" />
+            </button>
+            <BaseButton @click="selectBranch">이 지점 선택</BaseButton>
+          </div>
+        </article>
+      </Transition>
     </div>
   </AppScreen>
 </template>
@@ -217,75 +240,100 @@ onMounted(initMap)
   color: var(--color-alert);
 }
 
-.branch-map__locate {
-  position: absolute;
-  top: var(--space-5);
-  right: var(--space-5);
-  z-index: 2;
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-height: 52px;
-  padding: 0 var(--space-4);
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-lg);
-  background: var(--color-surface);
-  color: var(--color-ink);
-  font-size: var(--text-lg);
-  font-weight: 800;
-  box-shadow: var(--shadow-card);
-  cursor: pointer;
-}
-
-.branch-map__locate:disabled {
-  color: var(--color-ink-faint);
-  cursor: not-allowed;
-}
-
 .selected-branch {
   position: absolute;
   right: 0;
   bottom: 0;
   left: 0;
-  z-index: 2;
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: var(--space-4);
+  z-index: 3;
   padding: var(--space-5) var(--screen-padding-x) calc(var(--space-5) + env(safe-area-inset-bottom, 0px));
-  border-radius: 28px 28px 0 0;
+  border-radius: 24px 24px 0 0;
   background: var(--color-surface);
-  box-shadow: 0 -8px 28px rgba(31, 35, 41, 0.08);
+  border: 1px solid var(--color-line);
+  border-bottom: 0;
+}
+
+.selected-branch__close {
+  position: absolute;
+  top: var(--space-4);
+  right: var(--space-4);
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-alt);
+  color: var(--color-ink-soft);
+  cursor: pointer;
+}
+
+.selected-branch__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.selected-branch__icon {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  background: var(--color-yellow-light);
+}
+
+.selected-branch__icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.selected-branch__info {
+  flex: 1;
+  min-width: 0;
 }
 
 .selected-branch h2 {
-  margin-bottom: var(--space-3);
+  padding-right: var(--space-8);
   color: var(--color-ink);
   font-family: var(--font-body);
-  font-size: var(--text-2xl);
+  font-size: var(--text-xl);
   font-weight: 900;
 }
 
-.selected-branch p {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--space-2);
+.selected-branch__meta {
+  margin-top: var(--space-1);
   color: var(--color-ink-soft);
-  font-size: var(--text-lg);
+  font-size: var(--text-base);
   font-weight: 600;
 }
 
-.selected-branch p span {
-  width: 1px;
-  height: 18px;
-  background: var(--color-line);
+.selected-branch__wait {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+  color: var(--color-accent-deep);
+  font-size: var(--text-base);
+  font-weight: 700;
+}
+
+.selected-branch__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
 }
 
 .selected-branch__call {
   display: grid;
+  flex-shrink: 0;
   place-items: center;
-  width: 60px;
-  height: 60px;
+  width: 52px;
+  height: 52px;
   border: 0;
   border-radius: var(--radius-pill);
   background: var(--color-yellow-faint);
@@ -293,8 +341,17 @@ onMounted(initMap)
   cursor: pointer;
 }
 
-.selected-branch__actions {
-  display: grid;
-  grid-column: 1 / -1;
+.selected-branch__actions .base-button {
+  flex: 1;
+}
+
+.branch-sheet-enter-active,
+.branch-sheet-leave-active {
+  transition: transform 220ms cubic-bezier(0.65, 0, 0.35, 1);
+}
+
+.branch-sheet-enter-from,
+.branch-sheet-leave-to {
+  transform: translateY(100%);
 }
 </style>
