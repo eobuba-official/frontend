@@ -74,14 +74,14 @@ onMounted(async () => {
     <template #header>
       <div class="fraud-header">
         <button
-          class="fraud-header__button"
+          class="fraud-header__button fraud-header__button--back"
           type="button"
+          aria-label="뒤로"
           @click="
             router.push(consultationFlow.fraudCheck ? routePaths.utteranceConfirm : routePaths.home)
           "
         >
-          <ChevronLeft :size="18" :stroke-width="2.4" aria-hidden="true" />
-          <span>뒤로</span>
+          <ChevronLeft :size="24" :stroke-width="2.4" aria-hidden="true" />
         </button>
         <button class="fraud-header__button" type="button" @click="router.push(routePaths.home)">
           처음으로
@@ -235,7 +235,13 @@ onMounted(async () => {
 .fraud-header__button > svg {
   display: block;
   flex-shrink: 0;
-  transform: translateY(1px);
+}
+
+.fraud-header__button--back {
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
 }
 
 .fraud {
@@ -415,15 +421,15 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: var(--space-1);
+  gap: var(--space-1) var(--space-2);
   line-height: 1.4;
 }
 
 .fraud__guardian-relation {
   padding: 1px 6px;
   border-radius: var(--radius-pill);
-  background: var(--color-yellow-light);
-  color: var(--color-accent-deep);
+  background: var(--color-surface-alt);
+  color: var(--color-ink-soft);
   font-size: 0.65rem;
   font-weight: 700;
   line-height: 1.4;

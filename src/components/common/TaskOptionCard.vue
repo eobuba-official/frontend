@@ -63,7 +63,9 @@ withDefaults(
 
 .task-option-card__description {
   color: var(--color-ink-soft);
-  font-size: var(--text-sm);
+  font-size: var(--text-xs);
+  word-break: keep-all;
+  overflow-wrap: normal;
 }
 
 .task-option-card__mark {

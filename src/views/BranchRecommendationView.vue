@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { Clock, MapPin } from '@lucide/vue'
+import { Clock, MapPin, Timer } from '@lucide/vue'
 import { useRouter } from 'vue-router'
 import AppScreen from '@/components/common/AppScreen.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
@@ -68,13 +68,13 @@ function viewOnMap() {
 <template>
   <AppScreen>
     <template #header>
-      <FlowHeader :current="5" :total="6" :back-to="routePaths.checklist" />
+      <FlowHeader :current="5" :total="6" :back-to="routePaths.checklist" label="지점 선택" />
     </template>
 
     <section class="branches">
-      <h1>이렇게 가시는 걸<br />추천드려요</h1>
+      <h1>방문하기 좋은 지점이에요</h1>
       <p v-if="isLoading">가까운 지점과 시간을 찾고 있어요.</p>
-      <p v-else-if="!errorMessage">가까운 시간과 적은 대기 시간을 순서로 보여드려요.</p>
+      <p v-else-if="!errorMessage">거리와 예상 대기 시간을 비교해 보세요.</p>
       <p v-else class="branches__error">{{ errorMessage }}</p>
 
       <div class="branches__list">
@@ -84,21 +84,31 @@ function viewOnMap() {
           class="branch-card"
           :class="{ 'branch-card--best': selectedRank === item.rank }"
           type="button"
+          :aria-pressed="selectedRank === item.rank"
           @click="selectedRank = item.rank"
         >
           <span class="branch-card__rank">{{ item.rank }}</span>
           <span class="branch-card__body">
-            <strong>{{ item.branch.name }}</strong>
-            <small>
-              <Clock :size="15" :stroke-width="2.2" />
-              {{ item.visitTime.dayLabel }} {{ item.visitTime.timeLabel }} · 대기 {{ item.expectedWaitMinutes }}분
-            </small>
-            <small>
-              <MapPin :size="15" :stroke-width="2.2" />
+            <span class="branch-card__header">
+              <strong>{{ item.branch.name }}</strong>
+              <em v-if="selectedRank === item.rank">선택</em>
+            </span>
+            <span class="branch-card__details">
+              <span class="branch-card__time">
+                <Clock :size="16" :stroke-width="2.2" />
+                <b>{{ item.visitTime.dayLabel }} {{ item.visitTime.timeLabel }}</b>
+              </span>
+              <span class="branch-card__wait">
+                <Timer :size="16" :stroke-width="2.2" />
+                <span>대기</span>
+                <b>{{ item.expectedWaitMinutes }}분</b>
+              </span>
+            </span>
+            <small class="branch-card__distance">
+              <MapPin :size="16" :stroke-width="2.2" />
               {{ item.branch.distanceKm != null ? `${item.branch.distanceKm}km` : item.branch.address }}
             </small>
           </span>
-          <em v-if="selectedRank === item.rank">선택됨</em>
         </button>
       </div>
     </section>
@@ -106,7 +116,7 @@ function viewOnMap() {
     <template #footer>
       <BottomActionBar stacked>
         <BaseButton variant="ghost" block @click="viewOnMap">지도에서 보기</BaseButton>
-        <BaseButton block :disabled="!selected" @click="handleConfirm">이 시간으로 정하기</BaseButton>
+        <BaseButton block :disabled="!selected" @click="handleConfirm">방문 일정 확인하기</BaseButton>
       </BottomActionBar>
     </template>
   </AppScreen>
@@ -148,6 +158,10 @@ function viewOnMap() {
   color: var(--color-ink);
   text-align: left;
   cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    transform 160ms ease;
 }
 
 .branch-card--best {
@@ -180,12 +194,47 @@ function viewOnMap() {
   min-width: 0;
 }
 
+.branch-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
 .branch-card strong {
   font-size: var(--text-base);
   font-weight: 800;
 }
 
-.branch-card small {
+.branch-card__details {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+  color: var(--color-ink-soft);
+  font-size: var(--text-sm);
+}
+
+.branch-card__time,
+.branch-card__wait {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.branch-card__wait {
+  padding-left: var(--space-2);
+  border-left: 1px solid var(--color-line);
+}
+
+.branch-card__time b,
+.branch-card__wait b {
+  color: var(--color-ink);
+  font-weight: 700;
+}
+
+.branch-card__distance {
   display: flex;
   align-items: center;
   gap: var(--space-1);
@@ -193,15 +242,18 @@ function viewOnMap() {
   font-size: var(--text-sm);
 }
 
+.branch-card__details svg,
+.branch-card__distance svg {
+  flex: 0 0 16px;
+}
+
 .branch-card em {
-  position: absolute;
-  right: var(--space-4);
-  top: var(--space-4);
+  flex-shrink: 0;
   padding: 2px var(--space-2);
   border-radius: var(--radius-pill);
   background: var(--color-accent);
   color: var(--color-accent-ink);
-  font-size: var(--text-xs);
+  font-size: var(--text-2xs);
   font-style: normal;
   font-weight: 800;
 }

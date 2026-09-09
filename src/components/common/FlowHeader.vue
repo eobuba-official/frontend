@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ChevronLeft } from '@lucide/vue'
+import { ChevronLeft, House } from '@lucide/vue'
 import { useRouter } from 'vue-router'
 import { routePaths } from '@/router/routePaths'
 
@@ -26,26 +26,26 @@ function goBack() {
 <template>
   <div class="flow-header">
     <div class="flow-header__top">
-      <button class="flow-header__button" type="button" @click="goBack">
-        <ChevronLeft :size="18" :stroke-width="2.4" aria-hidden="true" />
-        <span>뒤로</span>
+      <button class="flow-header__button flow-header__button--back" type="button" aria-label="뒤로" @click="goBack">
+        <ChevronLeft :size="24" :stroke-width="2.4" aria-hidden="true" />
       </button>
-      <span class="flow-header__step">
-        {{ current }} / {{ total }}
-        <em v-if="label">{{ label }}</em>
-      </span>
+      <strong class="flow-header__title">{{ label }}</strong>
       <button
         v-if="!hideHome"
         class="flow-header__button flow-header__button--home"
         type="button"
+        aria-label="처음으로"
         @click="router.push(routePaths.home)"
       >
-        처음으로
+        <House :size="22" :stroke-width="2.2" aria-hidden="true" />
       </button>
     </div>
 
-    <div class="flow-header__bar" aria-hidden="true">
-      <span :style="{ width: `${(current / total) * 100}%` }"></span>
+    <div class="flow-header__progress">
+      <div class="flow-header__bar" aria-hidden="true">
+        <span :style="{ width: `${(current / total) * 100}%` }"></span>
+      </div>
+      <span class="flow-header__count">{{ current }} / {{ total }}</span>
     </div>
   </div>
 </template>
@@ -54,7 +54,7 @@ function goBack() {
 .flow-header {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-3);
 }
 
 .flow-header__top {
@@ -82,24 +82,42 @@ function goBack() {
 .flow-header__button > svg {
   display: block;
   flex-shrink: 0;
-  transform: translateY(1px);
+}
+
+.flow-header__button--back {
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
 }
 
 .flow-header__button--home {
   justify-self: end;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
 }
 
-.flow-header__step {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  justify-self: center;
+.flow-header__title {
+  overflow: hidden;
   color: var(--color-ink-soft);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.flow-header__step em {
-  color: inherit;
-  font-style: normal;
+.flow-header__progress {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.flow-header__count {
+  align-self: flex-end;
+  color: var(--color-ink-faint);
+  font-size: var(--text-2xs);
   font-weight: 700;
 }
 

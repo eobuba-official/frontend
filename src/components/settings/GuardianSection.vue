@@ -355,7 +355,7 @@ async function confirmDeleteGuardian() {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: var(--space-1);
+  gap: var(--space-1) var(--space-2);
   line-height: 1.4;
 }
 
@@ -388,8 +388,8 @@ async function confirmDeleteGuardian() {
 .guardian-relation-badge {
   padding: 1px 6px;
   border-radius: var(--radius-pill);
-  background: var(--color-yellow-light);
-  color: var(--color-accent-deep);
+  background: var(--color-surface-alt);
+  color: var(--color-ink-soft);
   font-size: 0.65rem;
   font-weight: 700;
   line-height: 1.4;
