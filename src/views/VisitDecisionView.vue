@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Check, Home, PhoneCall, Smartphone } from '@lucide/vue'
+import { Check, Home, PhoneCall } from '@lucide/vue'
 import { useRouter } from 'vue-router'
 import AppScreen from '@/components/common/AppScreen.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import FlowHeader from '@/components/common/FlowHeader.vue'
 import InfoCard from '@/components/common/InfoCard.vue'
+import goodMascot from '@/assets/img/good.png'
+import hmmMascot from '@/assets/img/hmm.png'
 import { routePaths } from '@/router/routePaths'
 import { useConsultationFlowStore } from '@/stores/consultationFlow'
 
@@ -32,9 +34,13 @@ const heading = computed(() => {
     </template>
 
     <section v-if="consultationFlow.visitDecision" class="visit-decision">
-      <div class="visit-decision__icon" aria-hidden="true">
-        <Smartphone v-if="decision === 'NO_VISIT'" :size="42" :stroke-width="1.8" />
-        <PhoneCall v-else-if="decision === 'CHECK_NEEDED'" :size="42" :stroke-width="1.8" />
+      <div
+        class="visit-decision__icon"
+        :class="{ 'visit-decision__icon--mascot': decision === 'NO_VISIT' || decision === 'CHECK_NEEDED' }"
+        aria-hidden="true"
+      >
+        <img v-if="decision === 'NO_VISIT'" :src="goodMascot" alt="" />
+        <img v-else-if="decision === 'CHECK_NEEDED'" :src="hmmMascot" alt="" />
         <Home v-else :size="42" :stroke-width="1.8" />
       </div>
 
@@ -96,6 +102,18 @@ const heading = computed(() => {
   border-radius: var(--radius-pill);
   background: var(--color-yellow-light);
   color: var(--color-accent-deep);
+}
+
+.visit-decision__icon--mascot {
+  width: 140px;
+  height: 140px;
+  background: none;
+}
+
+.visit-decision__icon--mascot img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .visit-decision__copy {
