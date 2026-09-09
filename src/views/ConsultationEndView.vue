@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { CircleHelp } from '@lucide/vue'
 import { useRouter } from 'vue-router'
 import AppScreen from '@/components/common/AppScreen.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import BottomActionBar from '@/components/common/BottomActionBar.vue'
+import whatMascot from '@/assets/img/what.png'
 import { routePaths } from '@/router/routePaths'
 
 const router = useRouter()
@@ -17,7 +17,7 @@ function callCustomerCenter() {
   <AppScreen>
     <section class="end">
       <div class="end__icon" aria-hidden="true">
-        <CircleHelp :size="42" :stroke-width="1.8" />
+        <img :src="whatMascot" alt="" />
       </div>
       <h1>가까운 지점에서<br />상담받으시는 게 좋겠어요</h1>
       <p>말씀해주신 내용으로는 어떤 업무인지 확인이 어려워요.</p>
@@ -46,11 +46,14 @@ function callCustomerCenter() {
 .end__icon {
   display: grid;
   place-items: center;
-  width: 96px;
-  height: 96px;
-  border-radius: var(--radius-pill);
-  background: var(--color-yellow-light);
-  color: var(--color-accent-deep);
+  width: 140px;
+  height: 140px;
+}
+
+.end__icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .end p {

@@ -278,14 +278,12 @@ onBeforeUnmount(closeAudioGraph)
 }
 
 .home__brand-avatar {
-  flex: 0 0 60px;
-  width: 60px;
-  height: 60px;
-  border-radius: var(--radius-pill);
-  background-color: var(--color-yellow-light);
+  flex: 0 0 76px;
+  width: 76px;
+  height: 76px;
   background-repeat: no-repeat;
   background-position: center;
-  background-size: 78% auto;
+  background-size: 100% auto;
 }
 
 .home__brand-copy {
@@ -294,10 +292,9 @@ onBeforeUnmount(closeAudioGraph)
 
 .home__brand-name {
   color: var(--color-ink);
-  font-family: var(--font-body);
-  font-size: var(--text-2xl);
-  font-weight: 800;
-  line-height: 1.2;
+  font-family: 'Jua', var(--font-body);
+  font-size: 1.7rem;
+  line-height: 1.1;
 }
 
 .home__brand-tagline {
