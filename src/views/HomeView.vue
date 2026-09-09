@@ -242,8 +242,8 @@ onBeforeUnmount(() => {
           @permission-denied="handleOrbPermissionDenied"
         />
 
-        <small v-if="micError" class="home__hero-error home__hero-error--visible">
-          {{ micError }}
+        <small class="home__hero-error" :class="{ 'home__hero-error--visible': micError }">
+          {{ micError || '음성 안내 상태' }}
         </small>
       </section>
 
@@ -386,7 +386,11 @@ onBeforeUnmount(() => {
 }
 
 .home__hero-error {
-  min-height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 44px;
   color: var(--color-accent-deep);
   font-size: var(--text-sm);
   font-weight: 700;
