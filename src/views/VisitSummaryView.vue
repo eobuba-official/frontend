@@ -16,7 +16,7 @@ if (!consultationFlow.selectedBranch) {
 }
 
 const neededItems = computed(
-  () => consultationFlow.checklist?.items.filter((item) => item.status === 'INCLUDED') ?? [],
+  () => consultationFlow.checklist?.items.filter((item) => item.status !== 'EXCLUDED') ?? [],
 )
 
 const consultationNote = computed(() => {
@@ -35,7 +35,7 @@ function handleFinish() {
 <template>
   <AppScreen>
     <template #header>
-      <FlowHeader :current="6" :total="6" />
+      <FlowHeader :current="6" :total="6" label="방문 정보" />
     </template>
 
     <section v-if="consultationFlow.selectedBranch" class="summary">
@@ -46,7 +46,7 @@ function handleFinish() {
         </svg>
       </div>
 
-      <h1>이렇게 가시면 돼요</h1>
+      <h1>방문 정보를 확인해 주세요</h1>
 
       <ul class="summary-list" role="list">
         <li class="summary-item">
@@ -72,8 +72,8 @@ function handleFinish() {
             <FileText :size="20" :stroke-width="2.3" />
           </span>
           <span class="summary-item__body">
-            <strong>{{ consultationFlow.checklist.taskTypeName }}</strong>
-            <small>{{ neededItems.map((item) => item.name).join(', ') }}</small>
+            <strong>{{ consultationFlow.checklist.taskTypeName }} 준비물</strong>
+            <small>{{ neededItems.map((item) => item.name).join(' · ') }}</small>
           </span>
         </li>
       </ul>
@@ -85,7 +85,7 @@ function handleFinish() {
     </section>
 
     <template #footer>
-      <BaseButton block @click="handleFinish">끝내고 보기</BaseButton>
+      <BaseButton block @click="handleFinish">확인하고 홈으로 가기</BaseButton>
     </template>
   </AppScreen>
 </template>
@@ -102,8 +102,8 @@ function handleFinish() {
 .summary__done {
   display: grid;
   place-items: center;
-  width: 88px;
-  height: 88px;
+  width: 72px;
+  height: 72px;
   border-radius: var(--radius-pill);
   background: var(--color-yellow-light);
   color: var(--color-accent-deep);
@@ -111,8 +111,8 @@ function handleFinish() {
 }
 
 .success-check {
-  width: 52px;
-  height: 52px;
+  width: 42px;
+  height: 42px;
   overflow: visible;
 }
 

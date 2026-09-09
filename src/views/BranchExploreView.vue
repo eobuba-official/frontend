@@ -48,21 +48,30 @@ function distanceKm(lat1: number, lng1: number, lat2: number, lng2: number) {
   return EARTH_RADIUS_KM * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
 }
 
+function useMockBranches(origin: { lat: number; lng: number }) {
+  rawBranches.value = buildMockBranchesNear(origin).map((branch) => {
+    const km = distanceKm(origin.lat, origin.lng, branch.lat, branch.lng)
+    return {
+      ...branch,
+      distanceKm: Number(km.toFixed(2)),
+      walkMinutes: Math.round((km / WALKING_SPEED_KMH) * 60),
+    }
+  })
+}
+
 async function loadNearbyBranches(origin: { lat: number; lng: number }) {
+  if (import.meta.env.VITE_USE_MOCK_API === 'true') {
+    useMockBranches(origin)
+    return
+  }
+
   try {
     const result = await consultationService.getNearbyBranches({ lat: origin.lat, lng: origin.lng, limit: 20 })
     rawBranches.value = result.branches
   } catch {
     // /branches/nearby unreachable — fall back to mock branches near the viewer,
     // with walk time estimated the same way the backend would (distance ÷ 4km/h)
-    rawBranches.value = buildMockBranchesNear(origin).map((branch) => {
-      const km = distanceKm(origin.lat, origin.lng, branch.lat, branch.lng)
-      return {
-        ...branch,
-        distanceKm: Number(km.toFixed(2)),
-        walkMinutes: Math.round((km / WALKING_SPEED_KMH) * 60),
-      }
-    })
+    useMockBranches(origin)
   }
 }
 

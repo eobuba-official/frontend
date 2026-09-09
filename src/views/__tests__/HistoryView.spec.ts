@@ -27,6 +27,16 @@ const needsCheckItem: ConsultationHistoryItem = {
 describe('HistoryView', () => {
   afterEach(() => vi.restoreAllMocks())
 
+  it('renders a single element root for page transitions', async () => {
+    vi.spyOn(consultationService, 'getConsultationHistory').mockResolvedValue({ consultations: [] })
+    vi.spyOn(consultationService, 'getTaskTypes').mockResolvedValue([])
+
+    const wrapper = mountView()
+    await flushPromises()
+
+    expect(wrapper.element.nodeType).toBe(Node.ELEMENT_NODE)
+  })
+
   it('opens a detail dialog when a confirmed history item is selected', async () => {
     vi.spyOn(consultationService, 'getConsultationHistory').mockResolvedValue({
       consultations: [confirmedItem],

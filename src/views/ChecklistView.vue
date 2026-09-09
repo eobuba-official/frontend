@@ -109,7 +109,7 @@ function toggleItem(itemCode: string) {
 <template>
   <AppScreen>
     <template #header>
-      <FlowHeader :current="4" :total="6" />
+      <FlowHeader :current="4" :total="6" label="준비물 확인" />
     </template>
 
     <section v-if="phase === 'questions'" class="checklist-questions">
@@ -144,10 +144,10 @@ function toggleItem(itemCode: string) {
     </section>
 
     <section v-else class="checklist">
-      <h1>이것들을 챙겨 가세요</h1>
+      <h1>은행 방문 준비물이에요</h1>
       <p v-if="isLoading">준비물을 확인하고 있어요.</p>
       <p v-else-if="errorMessage" class="checklist__error">{{ errorMessage }}</p>
-      <p v-else>하나씩 눌러서 확인해보세요.</p>
+      <p v-else>준비한 항목을 체크해 주세요.</p>
 
       <div v-if="checklistItems.length > 0" class="checklist__items">
         <label

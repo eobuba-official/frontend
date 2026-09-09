@@ -313,61 +313,61 @@ onMounted(async () => {
     <template #footer>
       <BottomTabBar />
     </template>
-  </AppScreen>
 
-  <ConfirmModal
-    v-if="selectedHistoryItem"
-    title="이용 내역 상세"
-    single-action
-    @close="closeHistoryDetail"
-  >
-    <div class="history-detail">
-      <div
-        class="history-detail__task"
-        :class="`history-detail__task--${selectedHistoryItem.status === 'TASK_CONFIRMED' ? 'confirmed' : 'needsCheck'}`"
-      >
-        <span
-          class="history-detail__icon"
-          :class="`history-detail__icon--${selectedHistoryItem.status === 'TASK_CONFIRMED' ? 'confirmed' : 'needsCheck'}`"
-          aria-hidden="true"
+    <ConfirmModal
+      v-if="selectedHistoryItem"
+      title="이용 내역 상세"
+      single-action
+      @close="closeHistoryDetail"
+    >
+      <div class="history-detail">
+        <div
+          class="history-detail__task"
+          :class="`history-detail__task--${selectedHistoryItem.status === 'TASK_CONFIRMED' ? 'confirmed' : 'needsCheck'}`"
         >
-          <component
-            :is="selectedHistoryItem.status === 'TASK_CONFIRMED' ? taskIcon(selectedHistoryItem.taskTypeCode) : HelpCircle"
-            :size="22"
-            :stroke-width="2.3"
-          />
-        </span>
-        <div>
-          <span class="history-detail__label">
-            {{ selectedHistoryItem.status === 'TASK_CONFIRMED' ? '확정 업무' : '확인 상태' }}
+          <span
+            class="history-detail__icon"
+            :class="`history-detail__icon--${selectedHistoryItem.status === 'TASK_CONFIRMED' ? 'confirmed' : 'needsCheck'}`"
+            aria-hidden="true"
+          >
+            <component
+              :is="selectedHistoryItem.status === 'TASK_CONFIRMED' ? taskIcon(selectedHistoryItem.taskTypeCode) : HelpCircle"
+              :size="22"
+              :stroke-width="2.3"
+            />
           </span>
-          <strong>{{ historyTitle(selectedHistoryItem) }}</strong>
+          <div>
+            <span class="history-detail__label">
+              {{ selectedHistoryItem.status === 'TASK_CONFIRMED' ? '확정 업무' : '확인 상태' }}
+            </span>
+            <strong>{{ historyTitle(selectedHistoryItem) }}</strong>
+          </div>
         </div>
+
+        <dl class="history-detail__list">
+          <div v-if="selectedHistoryItem.status !== 'TASK_CONFIRMED'">
+            <dt>확인이 필요한 이유</dt>
+            <dd>{{ NEEDS_CHECK_REASON }}</dd>
+          </div>
+          <div>
+            <dt>말씀하신 요청</dt>
+            <dd>{{ selectedHistoryItem.correctedUtterance }}</dd>
+          </div>
+          <div>
+            <dt>기록 일시</dt>
+            <dd>
+              {{ formatDetailDate(selectedHistoryItem.createdAt) }}
+              {{ formatTime(selectedHistoryItem.createdAt) }}
+            </dd>
+          </div>
+        </dl>
       </div>
 
-      <dl class="history-detail__list">
-        <div v-if="selectedHistoryItem.status !== 'TASK_CONFIRMED'">
-          <dt>확인이 필요한 이유</dt>
-          <dd>{{ NEEDS_CHECK_REASON }}</dd>
-        </div>
-        <div>
-          <dt>말씀하신 요청</dt>
-          <dd>{{ selectedHistoryItem.correctedUtterance }}</dd>
-        </div>
-        <div>
-          <dt>기록 일시</dt>
-          <dd>
-            {{ formatDetailDate(selectedHistoryItem.createdAt) }}
-            {{ formatTime(selectedHistoryItem.createdAt) }}
-          </dd>
-        </div>
-      </dl>
-    </div>
-
-    <template #actions>
-      <BaseButton block @click="closeHistoryDetail">확인했어요</BaseButton>
-    </template>
-  </ConfirmModal>
+      <template #actions>
+        <BaseButton block @click="closeHistoryDetail">확인했어요</BaseButton>
+      </template>
+    </ConfirmModal>
+  </AppScreen>
 </template>
 
 <style scoped>
