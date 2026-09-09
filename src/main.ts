@@ -5,9 +5,11 @@ import './assets/styles/base.css'
 
 import App from './App.vue'
 import router from './router'
+import { registerServiceWorker } from './registerServiceWorker'
 import { applyTextSize, getTextSize } from './utils/textSize'
 
 applyTextSize(getTextSize())
+registerServiceWorker()
 
 const app = createApp(App)
 
