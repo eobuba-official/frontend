@@ -243,7 +243,7 @@ onBeforeUnmount(() => {
           ></span>
           <div class="home__brand-copy">
             <h1 class="home__brand-name">어부바</h1>
-            <p class="home__brand-tagline">어르신 부담 바로 덜기</p>
+            <p class="home__brand-tagline">어르신 부담 바로덜기</p>
           </div>
         </div>
       </header>
@@ -259,7 +259,7 @@ onBeforeUnmount(() => {
           </span>
         </div>
         <p class="home__greeting-message">{{ greetingLabel }}</p>
-        <p class="home__greeting-tagline">필요한 은행 일, 어부바가 도와드릴게요</p>
+        <p class="home__greeting-tagline">어르신 부담 바로덜기</p>
       </section>
 
       <section class="home__hero" aria-label="음성으로 말씀해 주세요">
@@ -270,7 +270,7 @@ onBeforeUnmount(() => {
                 ? '잠시만 기다려주세요'
                 : isListening
                   ? '끝나면 다시 눌러주세요'
-                  : '저를 눌러서 말씀하세요!'
+                  : '저를 터치하고 말해주세요!'
             }}
           </p>
         </div>
@@ -478,11 +478,17 @@ onBeforeUnmount(() => {
 }
 
 .home__hero-error {
-  min-height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 44px;
   color: var(--color-accent-deep);
   font-size: var(--text-sm);
   font-weight: 700;
+  line-height: 1.45;
   opacity: 0;
+  text-align: center;
   visibility: hidden;
   transition:
     opacity 0.2s ease,
