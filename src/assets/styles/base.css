@@ -14,6 +14,7 @@ body {
 
 html {
   overflow-x: hidden;
+  background: var(--color-bg);
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
@@ -23,14 +24,18 @@ html::-webkit-scrollbar {
 }
 
 body {
-  /* Gray outside the 480px app frame on wide viewports; AppScreen paints
-     its own --color-bg on top of this, so mobile widths never see it. */
-  background: var(--color-desktop-backdrop);
+  background: var(--color-bg);
   color: var(--color-ink);
   font-family: var(--font-body);
   font-size: var(--text-base);
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
+}
+
+@media (min-width: 640px) {
+  body {
+    background: var(--color-desktop-backdrop);
+  }
 }
 
 #app {

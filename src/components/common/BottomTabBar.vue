@@ -35,7 +35,12 @@ function go(path: string) {
       :class="{ 'tab-bar__item--active': isActive(tab.path) }"
       @click="go(tab.path)"
     >
-      <component :is="tab.icon" :size="24" :stroke-width="isActive(tab.path) ? 2.4 : 2" />
+      <component
+        :is="tab.icon"
+        class="tab-bar__icon"
+        :size="24"
+        :stroke-width="isActive(tab.path) ? 2.4 : 2"
+      />
       <span>{{ tab.label }}</span>
     </button>
   </nav>
@@ -65,6 +70,12 @@ function go(path: string) {
   font-size: var(--text-xs);
   font-weight: 700;
   cursor: pointer;
+}
+
+.tab-bar__icon {
+  width: 1.5rem !important;
+  height: 1.5rem !important;
+  flex: 0 0 1.5rem;
 }
 
 .tab-bar__item--active {
