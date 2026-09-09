@@ -95,8 +95,8 @@ async function confirmRegister() {
     </template>
 
     <section class="guardian">
-      <h1>가족 한 분을<br />등록해 주세요</h1>
-      <p class="guardian__lede">수상한 전화가 감지되면 이 분께<br />바로 알려드려요.</p>
+      <h1>보호자를<br />등록해 주세요</h1>
+      <p class="guardian__lede">수상한 전화가 감지되면<br />보호자에게 알려드릴게요.</p>
 
       <label class="name-field" for="own-name">
         <span class="name-field__label">본인 이름</span>

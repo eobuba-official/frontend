@@ -6,7 +6,7 @@ import AppScreen from '@/components/common/AppScreen.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import OtpInput from '@/components/common/OtpInput.vue'
 import PhoneNumberField from '@/components/common/PhoneNumberField.vue'
-import logoMark from '@/assets/img/logo-mark.png'
+import charMascot from '@/assets/img/char.png'
 import { routePaths } from '@/router/routePaths'
 import { authService } from '@/services/authService'
 import { useAuthFlowStore } from '@/stores/authFlow'
@@ -134,7 +134,7 @@ onBeforeUnmount(() => window.clearInterval(timer))
       <div class="login__brand">
         <span
           class="login__logo"
-          :style="{ backgroundImage: `url(${logoMark})` }"
+          :style="{ backgroundImage: `url(${charMascot})` }"
           aria-hidden="true"
         ></span>
         <div class="login__brand-copy">
@@ -227,13 +227,13 @@ onBeforeUnmount(() => window.clearInterval(timer))
 }
 
 .login__logo {
-  width: 42px;
-  height: 42px;
+  width: 76px;
+  height: 76px;
   border-radius: var(--radius-pill);
   background-color: transparent;
   background-position: center;
   background-repeat: no-repeat;
-  background-size: contain;
+  background-size: 100% auto;
 }
 
 .login__brand-name {
