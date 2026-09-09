@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
-import { MessageSquareText, Plus, Trash2, User } from '@lucide/vue'
+import { MessageSquareText, Plus, Trash2 } from '@lucide/vue'
 import BaseButton from '@/components/common/BaseButton.vue'
 import ConfirmModal from '@/components/common/ConfirmModal.vue'
 import PhoneNumberField from '@/components/common/PhoneNumberField.vue'
 import { authService } from '@/services/authService'
 import type { Guardian, GuardianRelation } from '@/api/types'
+import { nextHoduAvatar } from '@/utils/hoduAvatars'
 
 interface RelationOption {
   label: string
@@ -31,6 +32,17 @@ const isAddingGuardian = ref(false)
 const addGuardianError = ref('')
 const isAddConfirmationOpen = ref(false)
 const mockNotification = ref<string | null>(null)
+const guardianAvatarCache = new Map<string, string>()
+
+function guardianAvatar(guardian: Guardian) {
+  const key = String(guardian.guardianId ?? `${guardian.name}-${guardian.phoneNumber}`)
+  const cachedAvatar = guardianAvatarCache.get(key)
+  if (cachedAvatar) return cachedAvatar
+
+  const avatar = nextHoduAvatar()
+  guardianAvatarCache.set(key, avatar)
+  return avatar
+}
 
 const canAddGuardian = computed(
   () => newGuardianName.value.trim().length > 0 && newGuardianPhoneDigits.value.length === 8 && !isAddingGuardian.value,
@@ -161,7 +173,7 @@ async function confirmDeleteGuardian() {
 
 <template>
   <div class="settings-group">
-    <p class="settings-group__label">가족 관리</p>
+    <h2 class="settings-group__label">가족 관리</h2>
     <div class="settings-card">
       <p v-if="isLoadingGuardians" class="settings-status">불러오는 중...</p>
       <p v-else-if="guardiansError" class="settings-status settings-status--error">{{ guardiansError }}</p>
@@ -172,7 +184,7 @@ async function confirmDeleteGuardian() {
         <template v-for="(guardian, index) in guardians" :key="guardian.guardianId ?? guardian.phoneNumber">
           <div class="settings-row settings-row--static">
             <span class="settings-row__icon" aria-hidden="true">
-              <User :size="20" :stroke-width="2.2" />
+              <img :src="guardianAvatar(guardian)" alt="" />
             </span>
             <span class="settings-row__copy">
               <strong class="guardian-heading">
@@ -319,7 +331,7 @@ async function confirmDeleteGuardian() {
 .settings-group__label {
   padding-left: var(--space-1);
   color: var(--color-ink-soft);
-  font-size: var(--text-sm);
+  font-size: var(--text-base);
   font-weight: 700;
 }
 
@@ -356,6 +368,12 @@ async function confirmDeleteGuardian() {
   border-radius: var(--radius-pill);
   background: var(--color-yellow-light);
   color: var(--color-accent-deep);
+}
+
+.settings-row__icon img {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
 }
 
 .settings-row__copy {

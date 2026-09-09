@@ -36,7 +36,7 @@ function handleLogout() {
       <section class="app-info" aria-labelledby="app-info-title">
         <h2 id="app-info-title">앱 정보</h2>
         <dl class="app-info__card">
-          <dt>앱 버전</dt>
+          <dt>현재 버전</dt>
           <dd>{{ version }}</dd>
         </dl>
       </section>

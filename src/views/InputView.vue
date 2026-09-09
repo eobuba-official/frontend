@@ -55,7 +55,7 @@ function submitInput() {
       </label>
 
       <div class="manual-input__popular">
-        <h2>이런 업무를 많이 물어봐요</h2>
+        <h2>자주 찾는 업무예요</h2>
 
         <button
           v-for="task in popularTasks"

@@ -202,7 +202,7 @@ onMounted(initMap)
   <AppScreen no-padding flush-footer>
     <div class="explore">
       <div class="explore__topbar">
-        <span class="explore__title">내 주변 은행</span>
+        <span class="explore__title">가까운 은행 찾기</span>
       </div>
 
       <div class="explore__content">
