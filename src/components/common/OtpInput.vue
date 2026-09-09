@@ -84,23 +84,31 @@ function handlePaste(event: ClipboardEvent) {
   display: flex;
   gap: var(--space-2);
   justify-content: center;
+  width: 100%;
 }
 
 .otp-input__box {
-  width: 44px;
+  width: 42px;
   height: 52px;
-  border: 1px solid var(--color-line);
+  border: 1.5px solid #dfe3e8;
   border-radius: var(--radius-sm);
-  background: var(--color-surface);
+  background: #ffffff;
   color: var(--color-ink);
   font: inherit;
   font-size: var(--text-xl);
   font-weight: 800;
   text-align: center;
+  box-shadow: inset 0 0 0 1px rgba(31, 35, 41, 0.02);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .otp-input__box:focus {
   outline: none;
   border-color: var(--color-accent);
+  box-shadow:
+    inset 0 0 0 1px var(--color-accent),
+    0 0 0 3px rgba(255, 188, 0, 0.12);
 }
 </style>
