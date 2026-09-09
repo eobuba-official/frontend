@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, ref } from 'vue'
 import { Keyboard, ShieldAlert } from '@lucide/vue'
 import { useRouter } from 'vue-router'
 import AppScreen from '@/components/common/AppScreen.vue'
@@ -58,6 +58,10 @@ async function handleVoiceStart() {
   }
 
   micError.value = ''
+  // clear the previous consultation only when a new one actually starts — resetting on
+  // every Home mount wiped the state that the flow screens still need when the user
+  // navigates back into them
+  consultationFlow.reset()
   await startRecording()
 }
 
@@ -158,16 +162,13 @@ function closeAudioGraph() {
 }
 
 function goTextInput() {
+  consultationFlow.reset()
   void router.push(routePaths.input)
 }
 
 function goFraudWarning() {
   void router.push(routePaths.fraudWarning)
 }
-
-onMounted(() => {
-  consultationFlow.reset()
-})
 
 onBeforeUnmount(closeAudioGraph)
 </script>
