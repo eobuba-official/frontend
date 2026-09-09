@@ -43,6 +43,9 @@ watch(
     })
     observer.observe(sheetEl.value)
   },
+  // a screen can open with a branch already selected (the flow's map preselects the top
+  // recommendation), and then sheetKey never changes — measure on mount too
+  { immediate: true },
 )
 
 onBeforeUnmount(() => observer?.disconnect())
