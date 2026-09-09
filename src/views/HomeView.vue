@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { CalendarDays, Keyboard, MoonStar, ShieldAlert, Sun, Sunrise, Sunset } from '@lucide/vue'
+import { Keyboard, ShieldAlert } from '@lucide/vue'
 import { useRouter } from 'vue-router'
 import AppScreen from '@/components/common/AppScreen.vue'
 import BottomTabBar from '@/components/common/BottomTabBar.vue'
@@ -39,31 +39,6 @@ const voiceOrbState = computed<'idle' | 'listening' | 'thinking'>(() => {
 const voiceOrbMood = computed<'default' | 'sleepy' | 'surprised' | 'error'>(() => {
   if (micError.value) return 'error'
   return idleMascotMood.value
-})
-
-const WEEKDAY_LABELS = ['일', '월', '화', '수', '목', '금', '토']
-
-const today = new Date()
-
-const todayLabel = computed(
-  () => `${today.getMonth() + 1}월 ${today.getDate()}일 ${WEEKDAY_LABELS[today.getDay()]}요일`,
-)
-
-const greetingLabel = computed(() => {
-  const hour = today.getHours()
-  if (hour >= 5 && hour < 11) return '상쾌한 아침이에요'
-  if (hour >= 11 && hour < 14) return '든든한 점심시간이에요'
-  if (hour >= 14 && hour < 18) return '편안한 오후예요'
-  if (hour >= 18 && hour < 22) return '차분한 저녁이에요'
-  return '편히 쉬실 시간이에요'
-})
-
-const greetingIcon = computed(() => {
-  const hour = today.getHours()
-  if (hour >= 5 && hour < 11) return Sunrise
-  if (hour >= 11 && hour < 18) return Sun
-  if (hour >= 18 && hour < 22) return Sunset
-  return MoonStar
 })
 
 async function handleVoiceStart() {
@@ -248,31 +223,15 @@ onBeforeUnmount(() => {
         </div>
       </header>
 
-      <section class="home__greeting" aria-label="오늘의 인사">
-        <div class="home__greeting-top">
-          <p class="home__greeting-date">
-            <CalendarDays :size="15" :stroke-width="2.2" aria-hidden="true" />
-            {{ todayLabel }}
-          </p>
-          <span class="home__greeting-icon" aria-hidden="true">
-            <component :is="greetingIcon" :size="22" :stroke-width="2.2" />
-          </span>
-        </div>
-        <p class="home__greeting-message">{{ greetingLabel }}</p>
-        <p class="home__greeting-tagline">필요한 은행 일, 어부바가 도와드릴게요</p>
-      </section>
-
       <section class="home__hero" aria-label="음성으로 말씀해 주세요">
         <div class="home__hero-top">
-          <p class="home__hero-caption">
-            {{
-              isProcessing
-                ? '잠시만 기다려주세요'
-                : isListening
-                  ? '끝나면 다시 눌러주세요'
-                  : '저를 눌러서 말씀하세요!'
-            }}
-          </p>
+          <div class="home__hero-copy">
+            <p class="home__hero-caption">
+              <template v-if="isProcessing">잠시만 기다려 주세요</template>
+              <template v-else-if="isListening">말씀을 마치면 다시 눌러 주세요</template>
+              <template v-else>저를 누르고 말씀해 주세요</template>
+            </p>
+          </div>
         </div>
 
         <VoiceOrb
@@ -283,10 +242,9 @@ onBeforeUnmount(() => {
           @permission-denied="handleOrbPermissionDenied"
         />
 
-        <small class="home__hero-error" :class="{ 'home__hero-error--visible': micError }">
-          {{ micError || '음성 안내 상태' }}
+        <small v-if="micError" class="home__hero-error home__hero-error--visible">
+          {{ micError }}
         </small>
-        <div class="home__hero-bottom" aria-hidden="true"></div>
       </section>
 
       <section class="quick-actions" aria-label="빠른 실행">
@@ -372,109 +330,59 @@ onBeforeUnmount(() => {
   font-weight: 600;
 }
 
-.home__greeting {
-  position: relative;
-  overflow: hidden;
-  padding: var(--space-5);
-  border: 1px solid rgba(218, 166, 18, 0.14);
-  border-radius: var(--radius-lg);
-  background: linear-gradient(145deg, #fff3b8 0%, var(--color-yellow-faint) 72%, #fffdf4 100%);
-  box-shadow: 0 8px 22px rgba(218, 166, 18, 0.08);
-}
-
-.home__greeting::after {
-  position: absolute;
-  right: -34px;
-  bottom: -52px;
-  width: 128px;
-  height: 128px;
-  border-radius: var(--radius-pill);
-  background: rgba(255, 255, 255, 0.42);
-  content: '';
-}
-
-.home__greeting-top {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-}
-
-.home__greeting-date {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  width: fit-content;
-  padding: 5px 10px;
-  border-radius: var(--radius-pill);
-  background: rgba(255, 255, 255, 0.68);
-  color: var(--color-accent-deep);
-  font-size: var(--text-sm);
-  font-weight: 700;
-}
-
-.home__greeting-icon {
-  display: grid;
-  flex: 0 0 40px;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  border: 1px solid rgba(218, 166, 18, 0.16);
-  border-radius: var(--radius-pill);
-  background: rgba(255, 255, 255, 0.7);
-  color: var(--color-accent-deep);
-}
-
-.home__greeting-message {
-  position: relative;
-  z-index: 1;
-  margin-top: var(--space-3);
-  color: var(--color-ink);
-  font-family: var(--font-body);
-  font-size: var(--text-2xl);
-  font-weight: 800;
-  line-height: 1.3;
-}
-
-.home__greeting-tagline {
-  position: relative;
-  z-index: 1;
-  margin-top: var(--space-1);
-  color: var(--color-ink-soft);
-  font-size: var(--text-base);
-  font-weight: 600;
-}
-
 .home__hero {
   position: relative;
   z-index: 2;
   display: flex;
-  flex: 1;
+  flex: 1 0 auto;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: var(--space-3);
-  padding-block: var(--space-2);
+  padding-block: var(--space-4);
   text-align: center;
+}
+
+.home__hero::before {
+  position: absolute;
+  top: 57%;
+  left: 50%;
+  width: min(82vw, 360px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 232, 143, 0.34) 0%,
+    rgba(255, 246, 207, 0.2) 48%,
+    rgba(255, 250, 235, 0) 72%
+  );
+  content: '';
+  pointer-events: none;
+  transform: translate(-50%, -50%);
 }
 
 .home__hero-top {
   display: flex;
-  flex: 1;
+  flex: 0 0 auto;
   align-items: center;
   justify-content: center;
   width: 100%;
+  position: relative;
+  z-index: 1;
 }
 
-.home__hero-bottom {
-  flex: 1;
+.home__hero-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .home__hero-caption {
-  color: var(--color-ink-soft);
+  position: relative;
+  color: var(--color-ink);
   font-size: var(--text-2xl);
-  font-weight: 600;
+  font-weight: 800;
+  line-height: 1.35;
 }
 
 .home__hero-error {
@@ -556,15 +464,12 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 420px) {
+  .home {
+    gap: var(--space-4);
+    padding-top: var(--space-4);
+  }
+
   .home__brand-tagline {
-    font-size: var(--text-sm);
-  }
-
-  .home__greeting-message {
-    font-size: var(--text-xl);
-  }
-
-  .home__greeting-tagline {
     font-size: var(--text-sm);
   }
 

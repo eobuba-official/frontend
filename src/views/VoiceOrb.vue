@@ -153,8 +153,8 @@ onBeforeUnmount(stopAudioMeter)
   z-index: 2;
   display: grid;
   place-items: center;
-  width: min(72vw, 282px);
-  height: min(72vw, 282px);
+  width: min(64vw, 248px);
+  height: min(64vw, 248px);
   border: 0;
   border-radius: 50%;
   background: transparent;
@@ -163,6 +163,13 @@ onBeforeUnmount(stopAudioMeter)
   transition:
     transform 0.24s ease,
     filter 0.24s ease;
+}
+
+@media (max-width: 420px) {
+  .voice-orb {
+    width: min(60vw, 232px);
+    height: min(60vw, 232px);
+  }
 }
 
 .voice-orb__stage {
