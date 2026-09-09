@@ -7,7 +7,17 @@ import PhoneNumberField from '@/components/common/PhoneNumberField.vue'
 import { authService } from '@/services/authService'
 import type { Guardian, GuardianRelation } from '@/api/types'
 
-const relations: GuardianRelation[] = ['아들', '딸', '배우자', '기타']
+interface RelationOption {
+  label: string
+  value: GuardianRelation
+}
+
+const relations: RelationOption[] = [
+  { label: '아들', value: '아들' },
+  { label: '딸', value: '딸' },
+  { label: '배우자', value: '배우자' },
+  { label: '보호자', value: '기타' },
+]
 
 const guardians = ref<Guardian[]>([])
 const isLoadingGuardians = ref(true)
@@ -27,8 +37,14 @@ const canAddGuardian = computed(
 )
 
 const formattedNewGuardianPhone = computed(() => formatPhone(`010${newGuardianPhoneDigits.value}`))
+const newGuardianRelationLabel = computed(
+  () =>
+    relations.find((option) => option.value === newGuardianRelation.value)?.label ??
+    newGuardianRelation.value,
+)
 const addConfirmationDescription = computed(
-  () => `${newGuardianName.value.trim()}님 · ${newGuardianRelation.value}\n${formattedNewGuardianPhone.value}`,
+  () =>
+    `${newGuardianName.value.trim()}님 · ${newGuardianRelationLabel.value}\n${formattedNewGuardianPhone.value}`,
 )
 
 const pendingDeleteGuardian = ref<Guardian | null>(null)
@@ -45,6 +61,10 @@ const deleteGuardianDescription = computed(() => {
 
 function formatPhone(phoneNumber: string) {
   return phoneNumber.length === 11 ? `${phoneNumber.slice(0, 3)}-${phoneNumber.slice(3, 7)}-${phoneNumber.slice(7)}` : phoneNumber
+}
+
+function formatRelation(relation: GuardianRelation) {
+  return relations.find((option) => option.value === relation)?.label ?? relation
 }
 
 onMounted(async () => {
@@ -157,7 +177,7 @@ async function confirmDeleteGuardian() {
             <span class="settings-row__copy">
               <strong class="guardian-heading">
                 <span>{{ guardian.name }}</span>
-                <span class="guardian-relation-badge">{{ guardian.relation }}</span>
+                <span class="guardian-relation-badge">{{ formatRelation(guardian.relation) }}</span>
                 <span v-if="guardian.status === 'DECLINED'" class="guardian-status-badge">
                   수신 거부
                 </span>
@@ -211,13 +231,13 @@ async function confirmDeleteGuardian() {
       <div class="modal-relation__options">
         <button
           v-for="option in relations"
-          :key="option"
+          :key="option.value"
           type="button"
           class="relation-chip"
-          :class="{ 'relation-chip--active': newGuardianRelation === option }"
-          @click="newGuardianRelation = option"
+          :class="{ 'relation-chip--active': newGuardianRelation === option.value }"
+          @click="newGuardianRelation = option.value"
         >
-          {{ option }}
+          {{ option.label }}
         </button>
       </div>
     </div>
