@@ -53,6 +53,8 @@ const emit = defineEmits<{ close: [] }>()
   margin-top: var(--space-2);
   color: var(--color-ink-soft);
   font-size: var(--text-base);
+  line-height: 1.6;
+  white-space: pre-line;
 }
 
 .confirm-modal__actions {

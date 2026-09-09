@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, ref, watch } from 'vue'
-import { X } from '@lucide/vue'
+import { MapPin, Navigation, X } from '@lucide/vue'
 import kbLogo from '@/assets/img/kb.png'
 
 const props = defineProps<{
@@ -61,15 +61,17 @@ onBeforeUnmount(() => observer?.disconnect())
         </span>
         <div class="map-sheet__info">
           <h2>{{ title }}</h2>
-          <p
-            v-for="(line, index) in metaLines"
-            :key="index"
-            class="map-sheet__meta"
-            :class="{ 'map-sheet__meta--sub': index > 0 }"
-          >
-            {{ line }}
-          </p>
         </div>
+      </div>
+
+      <div v-if="metaLines.length" class="map-sheet__details">
+        <p v-for="(line, index) in metaLines" :key="index" class="map-sheet__detail">
+          <span class="map-sheet__detail-icon" aria-hidden="true">
+            <Navigation v-if="index === 0" :size="16" :stroke-width="2.2" />
+            <MapPin v-else :size="16" :stroke-width="2.2" />
+          </span>
+          <span>{{ line }}</span>
+        </p>
       </div>
 
       <slot />
@@ -90,6 +92,7 @@ onBeforeUnmount(() => observer?.disconnect())
   background: var(--color-surface);
   border: 1px solid var(--color-line);
   border-bottom: 0;
+  box-shadow: 0 -10px 32px rgba(31, 35, 41, 0.1);
 }
 
 .map-sheet__close {
@@ -110,15 +113,16 @@ onBeforeUnmount(() => observer?.disconnect())
 .map-sheet__header {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-4);
+  padding-right: var(--space-8);
 }
 
 .map-sheet__icon {
   display: grid;
   flex-shrink: 0;
   place-items: center;
-  width: 48px;
-  height: 48px;
+  width: 52px;
+  height: 52px;
   overflow: hidden;
   border-radius: var(--radius-md);
   background: var(--color-yellow-light);
@@ -136,22 +140,42 @@ onBeforeUnmount(() => observer?.disconnect())
 }
 
 .map-sheet h2 {
-  padding-right: var(--space-8);
   color: var(--color-ink);
   font-family: var(--font-body);
   font-size: var(--text-xl);
   font-weight: 900;
 }
 
-.map-sheet__meta {
-  margin-top: var(--space-1);
+.map-sheet__details {
+  display: grid;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-raised);
+}
+
+.map-sheet__detail {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
   color: var(--color-ink-soft);
   font-size: var(--text-base);
   font-weight: 600;
+  line-height: 1.45;
 }
 
-.map-sheet__meta--sub {
-  font-weight: 500;
+.map-sheet__detail + .map-sheet__detail {
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-line);
+}
+
+.map-sheet__detail-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--color-accent-deep);
 }
 
 .map-sheet-enter-active,
