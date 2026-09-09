@@ -4,6 +4,7 @@ import { ChevronLeft } from '@lucide/vue'
 import { useRouter } from 'vue-router'
 import AppScreen from '@/components/common/AppScreen.vue'
 import BaseButton from '@/components/common/BaseButton.vue'
+import ConfirmModal from '@/components/common/ConfirmModal.vue'
 import PhoneNumberField from '@/components/common/PhoneNumberField.vue'
 import { routePaths } from '@/router/routePaths'
 import { authService } from '@/services/authService'
@@ -25,6 +26,7 @@ const guardianPhoneDigits = ref('')
 const relation = ref<GuardianRelation>('아들')
 const isSubmitting = ref(false)
 const errorMessage = ref('')
+const isConfirmOpen = ref(false)
 
 const canRegister = computed(
   () =>
@@ -34,7 +36,28 @@ const canRegister = computed(
     !isSubmitting.value,
 )
 
-async function handleRegister() {
+const guardianPhoneNumber = computed(() => `010${guardianPhoneDigits.value}`)
+const formattedGuardianPhone = computed(() =>
+  guardianPhoneNumber.value.length === 11
+    ? `${guardianPhoneNumber.value.slice(0, 3)}-${guardianPhoneNumber.value.slice(3, 7)}-${guardianPhoneNumber.value.slice(7)}`
+    : guardianPhoneNumber.value,
+)
+const confirmDescription = computed(
+  () => `${formattedGuardianPhone.value}, ${relation.value} ${guardianName.value.trim()}님이 맞나요?`,
+)
+
+function handleRegister() {
+  if (!canRegister.value) return
+  errorMessage.value = ''
+  isConfirmOpen.value = true
+}
+
+function closeConfirm() {
+  if (isSubmitting.value) return
+  isConfirmOpen.value = false
+}
+
+async function confirmRegister() {
   if (!canRegister.value) return
 
   isSubmitting.value = true
@@ -47,7 +70,7 @@ async function handleRegister() {
       guardians: [
         {
           name: guardianName.value.trim(),
-          phoneNumber: `010${guardianPhoneDigits.value}`,
+          phoneNumber: guardianPhoneNumber.value,
           relation: relation.value,
         },
       ],
@@ -124,6 +147,26 @@ async function handleRegister() {
       </BaseButton>
     </template>
   </AppScreen>
+
+  <ConfirmModal
+    v-if="isConfirmOpen"
+    role="alertdialog"
+    title="가족 정보를 확인해 주세요"
+    :description="confirmDescription"
+    @close="closeConfirm"
+  >
+    <p class="modal-guide">번호가 틀리면 안내 문자가 다른 사람에게 갈 수 있어요.</p>
+    <p v-if="errorMessage" class="guardian__error">{{ errorMessage }}</p>
+
+    <template #actions>
+      <BaseButton variant="ghost" block :disabled="isSubmitting" @click="closeConfirm">
+        다시 수정
+      </BaseButton>
+      <BaseButton block :disabled="isSubmitting" @click="confirmRegister">
+        {{ isSubmitting ? '시작하는 중...' : '맞아요' }}
+      </BaseButton>
+    </template>
+  </ConfirmModal>
 </template>
 
 <style scoped>
@@ -229,5 +272,12 @@ async function handleRegister() {
 .guardian__error {
   color: var(--color-alert);
   font-size: var(--text-sm);
+}
+
+.modal-guide {
+  margin-top: var(--space-3);
+  color: var(--color-ink-soft);
+  font-size: var(--text-sm);
+  line-height: 1.5;
 }
 </style>
