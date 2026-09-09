@@ -10,6 +10,11 @@ import { authService } from '@/services/authService'
 import { useAuthFlowStore } from '@/stores/authFlow'
 import type { GuardianRelation } from '@/api/types'
 
+interface RelationOption {
+  label: string
+  value: GuardianRelation
+}
+
 const router = useRouter()
 const authFlow = useAuthFlowStore()
 
@@ -17,9 +22,13 @@ if (!authFlow.signupToken) {
   router.replace(routePaths.login)
 }
 
-const relations: GuardianRelation[] = ['아들', '딸', '배우자', '기타']
+const relations: RelationOption[] = [
+  { label: '아들', value: '아들' },
+  { label: '딸', value: '딸' },
+  { label: '배우자', value: '배우자' },
+  { label: '보호자', value: '기타' },
+]
 
-const ownName = ref('')
 const guardianName = ref('')
 const guardianPhoneDigits = ref('')
 const relation = ref<GuardianRelation>('아들')
@@ -28,7 +37,7 @@ const errorMessage = ref('')
 
 const canRegister = computed(
   () =>
-    ownName.value.trim().length > 0 &&
+    authFlow.userName.trim().length > 0 &&
     guardianName.value.trim().length > 0 &&
     guardianPhoneDigits.value.length === 8 &&
     !isSubmitting.value,
@@ -43,7 +52,7 @@ async function handleRegister() {
   try {
     await authService.signup({
       signupToken: authFlow.signupToken ?? '',
-      name: ownName.value.trim(),
+      name: authFlow.userName.trim(),
       guardians: [
         {
           name: guardianName.value.trim(),
@@ -55,7 +64,8 @@ async function handleRegister() {
     authFlow.reset()
     await router.push(routePaths.home)
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : '가입을 완료하지 못했어요. 다시 시도해 주세요.'
+    errorMessage.value =
+      error instanceof Error ? error.message : '가입을 완료하지 못했어요. 다시 시도해 주세요.'
   } finally {
     isSubmitting.value = false
   }
@@ -65,7 +75,7 @@ async function handleRegister() {
 <template>
   <AppScreen>
     <template #header>
-      <button class="back-button" type="button" @click="router.push(routePaths.smsVerify)">
+      <button class="back-button" type="button" @click="router.push(routePaths.login)">
         <ChevronLeft :size="18" :stroke-width="2.4" />
         뒤로
       </button>
@@ -74,17 +84,6 @@ async function handleRegister() {
     <section class="guardian">
       <h1>가족 한 분을<br />등록해 주세요</h1>
       <p class="guardian__lede">수상한 전화가 감지되면 이 분께<br />바로 알려드려요.</p>
-
-      <label class="name-field" for="own-name">
-        <span class="name-field__label">본인 이름</span>
-        <input
-          id="own-name"
-          v-model="ownName"
-          class="name-field__input"
-          type="text"
-          placeholder="이름을 입력해 주세요"
-        />
-      </label>
 
       <label class="name-field" for="guardian-name">
         <span class="name-field__label">가족 이름</span>
@@ -104,13 +103,13 @@ async function handleRegister() {
         <div class="relation__options">
           <button
             v-for="option in relations"
-            :key="option"
+            :key="option.label"
             type="button"
             class="relation__chip"
-            :class="{ 'relation__chip--active': relation === option }"
-            @click="relation = option"
+            :class="{ 'relation__chip--active': relation === option.value }"
+            @click="relation = option.value"
           >
-            {{ option }}
+            {{ option.label }}
           </button>
         </div>
       </div>

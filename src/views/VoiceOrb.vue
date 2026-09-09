@@ -1,28 +1,31 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
-import { Mic } from '@lucide/vue'
+import hoduCharacter from '@/assets/img/hodu-character.png'
+import hoduError from '@/assets/img/hodu-error.png'
+import hoduSleepy from '@/assets/img/hodu-sleepy.png'
+import hoduSurprised from '@/assets/img/hodu-surprised.png'
 
 type VoiceOrbState = 'idle' | 'listening' | 'thinking'
+type VoiceOrbMood = 'default' | 'sleepy' | 'surprised' | 'error'
 
 const props = defineProps<{
   state: VoiceOrbState
+  mood?: VoiceOrbMood
   mediaStream?: MediaStream | null
 }>()
 
-const emit = defineEmits<{
+defineEmits<{
   toggle: []
   'permission-denied': []
 }>()
 
-const BAR_COUNT = 25
+const voiceLevel = ref(0)
+const voiceWobble = ref(0)
 
-const previousState = ref<VoiceOrbState>(props.state)
-const barHeights = ref(Array<number>(BAR_COUNT).fill(6))
-
-let ownedMediaStream: MediaStream | null = null
 let audioContext: AudioContext | null = null
 let analyser: AnalyserNode | null = null
-let freqData: Uint8Array<ArrayBuffer> | null = null
+let sourceNode: MediaStreamAudioSourceNode | null = null
+let timeData: Uint8Array<ArrayBuffer> | null = null
 let rafId = 0
 
 const ariaLabel = computed(() => {
@@ -31,531 +34,416 @@ const ariaLabel = computed(() => {
   return '눌러서 말하기'
 })
 
-const fadeDurationMs = computed(() => {
-  const pair = [previousState.value, props.state].sort().join('-')
-  return pair === 'idle-listening' ? 400 : 300
+const orbStyle = computed(() => ({
+  '--voice-level': voiceLevel.value.toFixed(3),
+  '--voice-wobble': voiceWobble.value.toFixed(3),
+  '--hodu-mask-image': `url(${hoduCharacter})`,
+}))
+
+const activeMood = computed(() => props.mood ?? 'default')
+const isSpeaking = computed(() => props.state === 'listening' && voiceLevel.value > 0.045)
+
+const mascotSrc = computed(() => {
+  if (props.state === 'thinking') return hoduCharacter
+  if (activeMood.value === 'sleepy') return hoduSleepy
+  if (activeMood.value === 'surprised') return hoduSurprised
+  if (activeMood.value === 'error') return hoduError
+  return hoduCharacter
 })
 
-function handleToggle() {
-  emit('toggle')
-}
-
-function stopListeningAudio() {
+function stopAudioMeter() {
   if (rafId) cancelAnimationFrame(rafId)
   rafId = 0
+  sourceNode?.disconnect()
   analyser = null
-  freqData = null
-  ownedMediaStream?.getTracks().forEach((track) => track.stop())
-  ownedMediaStream = null
+  sourceNode = null
+  timeData = null
+  voiceLevel.value = 0
+  voiceWobble.value = 0
+
   if (audioContext) {
     void audioContext.close()
     audioContext = null
   }
-  barHeights.value = Array<number>(BAR_COUNT).fill(6)
 }
 
-function runVisualizer() {
-  const bandSize = freqData ? Math.max(1, Math.floor(freqData.length / BAR_COUNT)) : 1
-  const center = (BAR_COUNT - 1) / 2
-
+function runAudioMeter() {
   const tick = () => {
-    if (!analyser || !freqData) return
-    analyser.getByteFrequencyData(freqData)
+    if (!analyser || !timeData) return
 
-    barHeights.value = barHeights.value.map((prevHeight, index) => {
-      const start = index * bandSize
-      const end = start + bandSize
-      const slice = freqData!.subarray(start, end)
-      let sum = 0
-      for (const value of slice) sum += value
-      const average = slice.length > 0 ? sum / slice.length : 0
-      const envelope = 0.15 + 0.85 * Math.cos(((index - center) / center) * (Math.PI / 2))
-      const target = 6 + (average / 255) * (46 - 6) * envelope
-      return prevHeight + (target - prevHeight) * 0.3
-    })
+    analyser.getByteTimeDomainData(timeData)
+    let sum = 0
+    for (const value of timeData) {
+      const normalized = (value - 128) / 128
+      sum += normalized * normalized
+    }
 
+    const rms = Math.sqrt(sum / timeData.length)
+    const target = Math.min(1, rms * 4.5)
+    const speakingStrength = target > 0.035 ? target : 0
+    const wobbleTarget = Math.sin(performance.now() / 58) * Math.min(1, speakingStrength * 1.8)
+
+    voiceLevel.value += (target - voiceLevel.value) * 0.35
+    voiceWobble.value += (wobbleTarget - voiceWobble.value) * 0.42
     rafId = requestAnimationFrame(tick)
   }
 
   rafId = requestAnimationFrame(tick)
 }
 
-function buildAnalyser(stream: MediaStream) {
+function startAudioMeter(stream: MediaStream) {
+  stopAudioMeter()
   audioContext = new AudioContext()
-  const source = audioContext.createMediaStreamSource(stream)
+  sourceNode = audioContext.createMediaStreamSource(stream)
   analyser = audioContext.createAnalyser()
-  analyser.fftSize = 64
-  freqData = new Uint8Array(analyser.frequencyBinCount)
-  source.connect(analyser)
-  runVisualizer()
-}
-
-async function startListeningAudio() {
-  if (props.mediaStream) {
-    buildAnalyser(props.mediaStream)
-    return
-  }
-
-  try {
-    ownedMediaStream = await navigator.mediaDevices.getUserMedia({
-      audio: {
-        noiseSuppression: true,
-        echoCancellation: true,
-        autoGainControl: true,
-        sampleRate: 16000,
-      },
-    })
-  } catch {
-    emit('permission-denied')
-    return
-  }
-
-  buildAnalyser(ownedMediaStream)
+  analyser.fftSize = 512
+  timeData = new Uint8Array(analyser.fftSize)
+  sourceNode.connect(analyser)
+  runAudioMeter()
 }
 
 watch(
-  () => props.state,
-  (next, prev) => {
-    previousState.value = prev
-    if (next === 'listening') {
-      void startListeningAudio()
-    } else {
-      stopListeningAudio()
+  () => [props.state, props.mediaStream] as const,
+  ([state, stream]) => {
+    if (state === 'listening' && stream) {
+      startAudioMeter(stream)
+      return
     }
+
+    stopAudioMeter()
   },
 )
 
-onBeforeUnmount(stopListeningAudio)
+onBeforeUnmount(stopAudioMeter)
 </script>
 
 <template>
-  <div
+  <button
     class="voice-orb"
-    :class="`voice-orb--${state}`"
-    role="button"
-    tabindex="0"
+    :class="[
+      `voice-orb--${state}`,
+      `voice-orb--mood-${activeMood}`,
+      { 'voice-orb--speaking': isSpeaking },
+    ]"
+    type="button"
+    :style="orbStyle"
     :aria-label="ariaLabel"
     aria-live="polite"
-    @click="handleToggle"
-    @keydown.enter.prevent="handleToggle"
-    @keydown.space.prevent="handleToggle"
+    @click="$emit('toggle')"
   >
     <span class="voice-orb__ripples" aria-hidden="true">
       <i class="voice-orb__ripple voice-orb__ripple--1"></i>
       <i class="voice-orb__ripple voice-orb__ripple--2"></i>
       <i class="voice-orb__ripple voice-orb__ripple--3"></i>
     </span>
-
-    <div class="voice-orb__surface">
-      <span class="voice-orb__blob voice-orb__blob--1"><i></i></span>
-      <span class="voice-orb__blob voice-orb__blob--2"><i></i></span>
-      <span class="voice-orb__blob voice-orb__blob--3"><i></i></span>
-      <span class="voice-orb__blob voice-orb__blob--4"><i></i></span>
-      <span class="voice-orb__blob voice-orb__blob--5"><i></i></span>
-
-      <Transition name="voice-orb-fade" mode="out-in">
-        <div v-if="state === 'idle'" key="idle" class="voice-orb__core voice-orb__core--idle">
-          <Mic class="voice-orb__mic" :size="32" :stroke-width="2" />
-        </div>
-        <div
-          v-else-if="state === 'listening'"
-          key="listening"
-          class="voice-orb__core voice-orb__core--listening"
-        >
-          <span class="voice-orb__bars">
-            <span
-              v-for="(height, index) in barHeights"
-              :key="index"
-              class="voice-orb__bar"
-              :style="{ height: `${height}px` }"
-            ></span>
-          </span>
-        </div>
-        <div v-else key="thinking" class="voice-orb__core voice-orb__core--thinking">
-          <span class="voice-orb__dots">
-            <span class="voice-orb__dot voice-orb__dot--1"></span>
-            <span class="voice-orb__dot voice-orb__dot--2"></span>
-            <span class="voice-orb__dot voice-orb__dot--3"></span>
-          </span>
-        </div>
-      </Transition>
-    </div>
-  </div>
+    <span class="voice-orb__stage" aria-hidden="true">
+      <img class="voice-orb__mascot" :src="mascotSrc" alt="" />
+      <span class="voice-orb__thoughts">
+        <i></i>
+        <i></i>
+        <i></i>
+      </span>
+    </span>
+  </button>
 </template>
 
 <style scoped>
 .voice-orb {
   position: relative;
   z-index: 2;
-  width: 240px;
-  height: 240px;
+  display: grid;
+  place-items: center;
+  width: min(72vw, 282px);
+  height: min(72vw, 282px);
+  border: 0;
   border-radius: 50%;
+  background: transparent;
   cursor: pointer;
-  animation: voice-orb-breathe-idle 4s ease-in-out infinite;
+  transform: translateZ(0);
+  transition:
+    transform 0.24s ease,
+    filter 0.24s ease;
 }
 
-.voice-orb__ripples,
-.voice-orb__ripple {
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  pointer-events: none;
+.voice-orb__stage {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 86%;
+  height: 86%;
 }
 
 .voice-orb__ripples {
-  z-index: -1;
+  position: absolute;
+  z-index: 0;
+  inset: -6%;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.24s ease;
+}
+
+.voice-orb__ripples::before {
+  position: absolute;
+  inset: 1%;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 46% 42%, rgba(255, 251, 231, 0.84) 0%, transparent 31%),
+    radial-gradient(circle at 54% 62%, rgba(255, 188, 0, 0.42) 0%, transparent 58%),
+    radial-gradient(circle, rgba(255, 246, 205, 0.48) 0%, rgba(216, 170, 32, 0.28) 54%, transparent 77%);
+  content: '';
+  filter: blur(11px);
+  opacity: calc(0.68 + var(--voice-level) * 0.34);
+  transform: scale(calc(0.98 + var(--voice-level) * 0.05));
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease;
+}
+
+.voice-orb--listening .voice-orb__ripples {
+  opacity: 1;
 }
 
 .voice-orb__ripple {
-  opacity: 0;
+  position: absolute;
+  inset: 0;
+  border-radius: 0;
   background:
     radial-gradient(
-      circle,
-      transparent 51%,
-      rgba(255, 251, 231, 0.96) 54%,
-      rgba(255, 210, 75, 0.78) 57%,
-      transparent 61%
+      ellipse at 50% 54%,
+      rgba(255, 251, 231, 0.2) 0%,
+      rgba(255, 210, 75, 0.42) 45%,
+      rgba(255, 188, 0, 0.38) 62%,
+      transparent 78%
     ),
     radial-gradient(
-      circle,
-      transparent 50%,
-      rgba(255, 188, 0, 0.32) 60%,
-      rgba(232, 134, 58, 0.13) 70%,
-      transparent 79%
+      ellipse at 42% 36%,
+      rgba(255, 255, 255, 0.78) 0%,
+      rgba(255, 246, 205, 0.42) 22%,
+      transparent 55%
+    ),
+    radial-gradient(
+      ellipse at 62% 68%,
+      rgba(232, 134, 58, 0.34) 0%,
+      transparent 48%
     );
-  filter: drop-shadow(0 10px 12px rgba(216, 170, 32, 0.16));
-  transform: scale(0.8);
-}
-
-.voice-orb--listening .voice-orb__ripple {
-  animation: voice-orb-ripple 2.7s cubic-bezier(0.2, 0.65, 0.3, 1) infinite;
-}
-
-.voice-orb--listening .voice-orb__ripple--2 {
-  animation-delay: 0.9s;
-}
-
-.voice-orb--listening .voice-orb__ripple--3 {
-  animation-delay: 1.8s;
-}
-
-.voice-orb::before {
-  content: '';
-  position: absolute;
-  inset: -12px;
-  border-radius: 50%;
-  box-shadow: 0 12px 42px -6px rgba(242, 167, 59, 0.3);
-  opacity: 0.25;
-  pointer-events: none;
-}
-
-.voice-orb--idle::before {
-  animation: voice-orb-glow 4s ease-in-out infinite;
-}
-
-.voice-orb--listening {
-  animation: voice-orb-breathe-listening 4s ease-in-out infinite;
-}
-
-.voice-orb--thinking {
-  animation: none;
-}
-
-.voice-orb--thinking .voice-orb__blob {
-  animation-duration: calc(var(--spin) / 2);
-}
-
-.voice-orb__surface {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow:
-    inset 0 18px 28px rgba(255, 252, 235, 0.32),
-    inset 0 -26px 42px rgba(193, 104, 28, 0.13);
-}
-
-.voice-orb__surface::before,
-.voice-orb__surface::after {
-  position: absolute;
-  z-index: 1;
-  content: '';
-  pointer-events: none;
-}
-
-.voice-orb__surface::before {
-  inset: 3% 10% auto;
-  height: 38%;
-  border-radius: 50%;
-  background: radial-gradient(
-    ellipse at 50% 0%,
-    rgba(255, 255, 255, 0.78),
-    rgba(255, 247, 205, 0.25) 45%,
-    transparent 72%
-  );
-  filter: blur(5px);
-}
-
-.voice-orb__surface::after {
-  right: 8%;
-  bottom: -8%;
-  left: 8%;
-  height: 42%;
-  border-radius: 50%;
-  background: radial-gradient(
-    ellipse at 50% 100%,
-    rgba(216, 170, 32, 0.3),
-    rgba(242, 167, 59, 0.12) 48%,
-    transparent 76%
-  );
-  filter: blur(12px);
-}
-
-.voice-orb__blob {
-  position: absolute;
-  inset: 0;
-  transform-origin: 50% 50%;
-  will-change: transform;
-  animation-name: voice-orb-spin;
-  animation-timing-function: linear;
-  animation-iteration-count: infinite;
-  animation-duration: var(--spin);
-  animation-direction: var(--dir);
-}
-
-.voice-orb__blob i {
-  position: absolute;
-  display: block;
-  border-radius: 50%;
-}
-
-.voice-orb__blob--1 {
-  --spin: 18s;
-  --dir: normal;
-}
-
-.voice-orb__blob--1 i {
-  width: 150px;
-  height: 130px;
-  top: -6%;
-  left: 8%;
-  background: #f2a73b;
-  filter: blur(34px);
-}
-
-.voice-orb__blob--2 {
-  --spin: 24s;
-  --dir: reverse;
-}
-
-.voice-orb__blob--2 i {
-  width: 130px;
-  height: 150px;
-  top: 45%;
-  left: 55%;
-  background: #ffd98a;
-  filter: blur(36px);
-}
-
-.voice-orb__blob--3 {
-  --spin: 30s;
-  --dir: normal;
-}
-
-.voice-orb__blob--3 i {
-  width: 170px;
-  height: 140px;
-  top: 18%;
-  left: -8%;
-  background: #e8863a;
-  filter: blur(32px);
-}
-
-.voice-orb__blob--4 {
-  --spin: 26s;
-  --dir: reverse;
-}
-
-.voice-orb__blob--4 i {
-  width: 120px;
-  height: 120px;
-  top: 58%;
-  left: 12%;
-  background: #ffffff;
-  filter: blur(38px);
-}
-
-.voice-orb__blob--5 {
-  --spin: 21s;
-  --dir: normal;
-}
-
-.voice-orb__blob--5 i {
-  width: 140px;
-  height: 160px;
-  top: -8%;
-  left: 48%;
-  background: #fff3d6;
-  filter: blur(30px);
-}
-
-.voice-orb__core {
-  position: relative;
-  z-index: 2;
-  width: 78px;
-  height: 78px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.voice-orb__core--idle,
-.voice-orb__core--thinking {
-  background: radial-gradient(circle at 42% 32%, #ffffff 0%, #fffdf4 58%, #fff3bf 100%);
-  box-shadow:
-    0 10px 24px rgba(142, 81, 22, 0.12),
-    inset 0 1px 0 rgba(255, 255, 255, 0.95);
-}
-
-.voice-orb__core--listening {
-  width: auto;
-  height: auto;
-}
-
-.voice-orb__mic {
-  color: #f2a73b;
-}
-
-.voice-orb__bars {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  height: 46px;
-}
-
-.voice-orb__bar {
-  width: 3px;
-  border-radius: 2px;
-  background: #c96518;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.5);
-}
-
-.voice-orb__dots {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.voice-orb__dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #f2a73b;
-  animation: voice-orb-dot-bounce 0.9s ease-in-out infinite;
-}
-
-.voice-orb__dot--1 {
-  animation-delay: 0s;
-}
-
-.voice-orb__dot--2 {
-  animation-delay: 0.15s;
-}
-
-.voice-orb__dot--3 {
-  animation-delay: 0.3s;
-}
-
-.voice-orb-fade-enter-active,
-.voice-orb-fade-leave-active {
-  transition: opacity v-bind('`${fadeDurationMs}ms`') ease;
-}
-
-.voice-orb-fade-enter-from,
-.voice-orb-fade-leave-to {
+  filter: blur(6px) drop-shadow(0 12px 18px rgba(216, 170, 32, 0.22));
+  mask-image: var(--hodu-mask-image);
+  mask-repeat: no-repeat;
+  mask-position: center;
+  mask-size: contain;
   opacity: 0;
+  transform: scale(0.96);
+  transform-origin: center;
+  will-change: transform, opacity;
+  -webkit-mask-image: var(--hodu-mask-image);
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: contain;
 }
 
-@keyframes voice-orb-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.voice-orb__mascot {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 20px 24px rgba(216, 170, 32, 0.16));
+  transform-origin: 50% 78%;
+  animation: hodu-idle 2.8s ease-in-out infinite;
+  transition:
+    transform 0.24s ease,
+    filter 0.24s ease;
 }
 
-@keyframes voice-orb-breathe-idle {
+.voice-orb__thoughts {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  top: 10%;
+  right: 7%;
+  min-width: 58px;
+  height: 36px;
+  padding: 0 12px;
+  border: 2px solid rgba(150, 78, 24, 0.52);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 8px 18px rgba(124, 68, 18, 0.12);
+}
+
+.voice-orb__thoughts i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #8c4d1f;
+  animation: hodu-thought 0.9s ease-in-out infinite;
+}
+
+.voice-orb__thoughts i:nth-child(2) {
+  animation-delay: 0.14s;
+}
+
+.voice-orb__thoughts i:nth-child(3) {
+  animation-delay: 0.28s;
+}
+
+.voice-orb--idle:hover {
+  transform: translateY(-2px);
+}
+
+.voice-orb--speaking .voice-orb__ripple {
+  animation: voice-orb-ripple 2.35s cubic-bezier(0.2, 0.65, 0.3, 1) infinite;
+}
+
+.voice-orb--speaking .voice-orb__ripple--2 {
+  animation-delay: 0.78s;
+}
+
+.voice-orb--speaking .voice-orb__ripple--3 {
+  animation-delay: 1.56s;
+}
+
+.voice-orb--listening .voice-orb__mascot {
+  animation: none;
+  transform:
+    translateY(calc(var(--voice-level) * -8px))
+    rotate(calc(var(--voice-wobble) * 5deg))
+    scale(calc(1 + var(--voice-level) * 0.14));
+  filter: drop-shadow(0 24px 28px rgba(216, 170, 32, 0.2));
+  transition:
+    transform 80ms linear,
+    filter 0.2s ease;
+}
+
+.voice-orb--thinking .voice-orb__mascot {
+  animation: hodu-thinking 1.1s ease-in-out infinite;
+}
+
+.voice-orb--thinking .voice-orb__thoughts {
+  opacity: 1;
+}
+
+.voice-orb--mood-sleepy .voice-orb__mascot {
+  animation: hodu-sleepy 1.55s ease-in-out infinite;
+  transform-origin: 50% 88%;
+}
+
+.voice-orb--mood-surprised .voice-orb__mascot {
+  animation: hodu-surprised 0.52s ease-out both;
+}
+
+.voice-orb--mood-error .voice-orb__mascot {
+  animation: hodu-error 0.42s ease-out both;
+}
+
+@keyframes hodu-idle {
   0%,
   100% {
-    transform: scale(1);
+    transform: translateY(0) rotate(-1.4deg) scale(1);
   }
+
   50% {
-    transform: scale(1.04);
+    transform: translateY(-9px) rotate(1.4deg) scale(1.015);
   }
 }
 
-@keyframes voice-orb-breathe-listening {
+@keyframes hodu-thinking {
   0%,
   100% {
-    transform: scale(1);
+    transform: rotate(-2deg) translateY(0);
   }
+
   50% {
-    transform: scale(1.08);
+    transform: rotate(2deg) translateY(-5px);
   }
 }
 
-@keyframes voice-orb-glow {
+@keyframes hodu-sleepy {
   0%,
   100% {
-    opacity: 0.25;
+    transform: translateY(0) rotate(-2deg) scale(0.995);
   }
+
   50% {
-    opacity: 0.4;
+    transform: translateY(10px) rotate(2deg) scale(1);
+  }
+}
+
+@keyframes hodu-surprised {
+  0% {
+    transform: translateY(0) scale(0.97);
+  }
+
+  45% {
+    transform: translateY(-12px) scale(1.06);
+  }
+
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes hodu-error {
+  0% {
+    transform: translateX(0);
+  }
+
+  28% {
+    transform: translateX(-5px) rotate(-1deg);
+  }
+
+  58% {
+    transform: translateX(5px) rotate(1deg);
+  }
+
+  100% {
+    transform: translateX(0);
+  }
+}
+
+@keyframes hodu-thought {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.45;
+  }
+
+  50% {
+    transform: translateY(-6px);
+    opacity: 1;
   }
 }
 
 @keyframes voice-orb-ripple {
   0% {
     opacity: 0;
-    transform: scale(0.78);
+    transform: scale(0.96);
   }
+
   16% {
-    opacity: 0.9;
+    opacity: calc(0.38 + var(--voice-level) * 0.38);
   }
-  76%,
+
+  58% {
+    opacity: calc(0.22 + var(--voice-level) * 0.28);
+  }
+
   100% {
     opacity: 0;
-    transform: scale(1.48);
-  }
-}
-
-@keyframes voice-orb-dot-bounce {
-  0%,
-  60%,
-  100% {
-    transform: translateY(0);
-  }
-  30% {
-    transform: translateY(-10px);
+    transform: scale(1.13);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .voice-orb,
-  .voice-orb--listening,
-  .voice-orb--listening .voice-orb__ripple,
-  .voice-orb__blob,
-  .voice-orb--idle::before {
+  .voice-orb__mascot,
+  .voice-orb__ripple,
+  .voice-orb__thoughts i {
     animation: none !important;
-  }
-
-  .voice-orb::before {
-    opacity: 0.25;
+    transition: none !important;
   }
 }
 </style>

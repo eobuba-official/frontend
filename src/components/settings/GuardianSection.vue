@@ -7,7 +7,17 @@ import PhoneNumberField from '@/components/common/PhoneNumberField.vue'
 import { authService } from '@/services/authService'
 import type { Guardian, GuardianRelation } from '@/api/types'
 
-const relations: GuardianRelation[] = ['아들', '딸', '배우자', '기타']
+interface RelationOption {
+  label: string
+  value: GuardianRelation
+}
+
+const relations: RelationOption[] = [
+  { label: '아들', value: '아들' },
+  { label: '딸', value: '딸' },
+  { label: '배우자', value: '배우자' },
+  { label: '보호자', value: '기타' },
+]
 
 const guardians = ref<Guardian[]>([])
 const isLoadingGuardians = ref(true)
@@ -21,7 +31,10 @@ const isAddingGuardian = ref(false)
 const addGuardianError = ref('')
 
 const canAddGuardian = computed(
-  () => newGuardianName.value.trim().length > 0 && newGuardianPhoneDigits.value.length === 8 && !isAddingGuardian.value,
+  () =>
+    newGuardianName.value.trim().length > 0 &&
+    newGuardianPhoneDigits.value.length === 8 &&
+    !isAddingGuardian.value,
 )
 
 const pendingDeleteGuardian = ref<Guardian | null>(null)
@@ -29,7 +42,13 @@ const isDeletingGuardian = ref(false)
 const deleteGuardianError = ref('')
 
 function formatPhone(phoneNumber: string) {
-  return phoneNumber.length === 11 ? `${phoneNumber.slice(0, 3)}-${phoneNumber.slice(3, 7)}-${phoneNumber.slice(7)}` : phoneNumber
+  return phoneNumber.length === 11
+    ? `${phoneNumber.slice(0, 3)}-${phoneNumber.slice(3, 7)}-${phoneNumber.slice(7)}`
+    : phoneNumber
+}
+
+function formatRelation(relation: GuardianRelation) {
+  return relation === '기타' ? '보호자' : relation
 }
 
 onMounted(async () => {
@@ -70,7 +89,8 @@ async function submitAddGuardian() {
     guardians.value = [...guardians.value, result.guardian]
     isAddGuardianOpen.value = false
   } catch (error) {
-    addGuardianError.value = error instanceof Error ? error.message : '가족을 추가하지 못했어요. 다시 시도해 주세요.'
+    addGuardianError.value =
+      error instanceof Error ? error.message : '가족을 추가하지 못했어요. 다시 시도해 주세요.'
   } finally {
     isAddingGuardian.value = false
   }
@@ -97,7 +117,8 @@ async function confirmDeleteGuardian() {
     guardians.value = guardians.value.filter((item) => item.guardianId !== guardian.guardianId)
     pendingDeleteGuardian.value = null
   } catch (error) {
-    deleteGuardianError.value = error instanceof Error ? error.message : '삭제하지 못했어요. 다시 시도해 주세요.'
+    deleteGuardianError.value =
+      error instanceof Error ? error.message : '삭제하지 못했어요. 다시 시도해 주세요.'
   } finally {
     isDeletingGuardian.value = false
   }
@@ -109,12 +130,17 @@ async function confirmDeleteGuardian() {
     <p class="settings-group__label">가족 관리</p>
     <div class="settings-card">
       <p v-if="isLoadingGuardians" class="settings-status">불러오는 중...</p>
-      <p v-else-if="guardiansError" class="settings-status settings-status--error">{{ guardiansError }}</p>
+      <p v-else-if="guardiansError" class="settings-status settings-status--error">
+        {{ guardiansError }}
+      </p>
       <p v-else-if="guardians.length === 0" class="settings-status">
         등록된 가족이 없어요. 수상한 전화가 감지돼도 알려드릴 수 없어요.
       </p>
       <template v-else>
-        <template v-for="(guardian, index) in guardians" :key="guardian.guardianId ?? guardian.phoneNumber">
+        <template
+          v-for="(guardian, index) in guardians"
+          :key="guardian.guardianId ?? guardian.phoneNumber"
+        >
           <div class="settings-row settings-row--static">
             <span class="settings-row__icon" aria-hidden="true">
               <User :size="20" :stroke-width="2.2" />
@@ -122,7 +148,7 @@ async function confirmDeleteGuardian() {
             <span class="settings-row__copy">
               <strong>
                 {{ guardian.name }}
-                <span class="guardian-relation-badge">{{ guardian.relation }}</span>
+                <span class="guardian-relation-badge">{{ formatRelation(guardian.relation) }}</span>
               </strong>
               <small>{{ formatPhone(guardian.phoneNumber) }}</small>
             </span>
@@ -135,7 +161,11 @@ async function confirmDeleteGuardian() {
               <Trash2 :size="18" :stroke-width="2.2" />
             </button>
           </div>
-          <div v-if="index < guardians.length - 1" class="settings-row-divider" aria-hidden="true"></div>
+          <div
+            v-if="index < guardians.length - 1"
+            class="settings-row-divider"
+            aria-hidden="true"
+          ></div>
         </template>
       </template>
     </div>
@@ -170,13 +200,13 @@ async function confirmDeleteGuardian() {
       <div class="modal-relation__options">
         <button
           v-for="option in relations"
-          :key="option"
+          :key="option.label"
           type="button"
           class="relation-chip"
-          :class="{ 'relation-chip--active': newGuardianRelation === option }"
-          @click="newGuardianRelation = option"
+          :class="{ 'relation-chip--active': newGuardianRelation === option.value }"
+          @click="newGuardianRelation = option.value"
         >
-          {{ option }}
+          {{ option.label }}
         </button>
       </div>
     </div>

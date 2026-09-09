@@ -19,6 +19,7 @@ const isListening = ref(false)
 const isProcessing = ref(false)
 const micError = ref('')
 const voiceMediaStream = ref<MediaStream | null>(null)
+const idleMascotMood = ref<'default' | 'sleepy' | 'surprised'>('default')
 
 let mediaStream: MediaStream | null = null
 let audioContext: AudioContext | null = null
@@ -26,11 +27,19 @@ let sourceNode: MediaStreamAudioSourceNode | null = null
 let processorNode: ScriptProcessorNode | null = null
 let silentGainNode: GainNode | null = null
 let audioChunks: Float32Array[] = []
+let idleTimer: number | undefined
+let sleepyTimer: number | undefined
+let surprisedTimer: number | undefined
 
 const voiceOrbState = computed<'idle' | 'listening' | 'thinking'>(() => {
   if (isProcessing.value) return 'thinking'
   if (isListening.value) return 'listening'
   return 'idle'
+})
+
+const voiceOrbMood = computed<'default' | 'sleepy' | 'surprised' | 'error'>(() => {
+  if (micError.value) return 'error'
+  return idleMascotMood.value
 })
 
 const WEEKDAY_LABELS = ['일', '월', '화', '수', '목', '금', '토']
@@ -52,6 +61,7 @@ const greetingLabel = computed(() => {
 
 async function handleVoiceStart() {
   if (isProcessing.value) return
+  resetIdleMascot()
 
   if (isListening.value) {
     await stopRecordingAndTranscribe()
@@ -63,6 +73,8 @@ async function handleVoiceStart() {
 }
 
 async function startRecording() {
+  clearIdleTimers()
+
   if (!isVoicePermissionEnabled()) {
     micError.value = '설정에서 음성 권한을 켜주세요.'
     return
@@ -95,6 +107,7 @@ async function startRecording() {
 }
 
 function handleOrbPermissionDenied() {
+  resetIdleMascot()
   micError.value = '마이크 권한이 꺼져 있어요. 브라우저 주소창의 마이크 아이콘에서 허용해 주세요.'
 }
 
@@ -106,6 +119,7 @@ async function stopRecordingAndTranscribe() {
 
   if (samples.length === 0) {
     micError.value = '말씀이 들리지 않았어요. 다시 눌러서 말씀해 주세요.'
+    scheduleIdleMascot()
     return
   }
 
@@ -127,7 +141,42 @@ async function stopRecordingAndTranscribe() {
     micError.value = '음성을 분석하지 못했어요. 다시 눌러서 말씀해 주세요.'
   } finally {
     isProcessing.value = false
+    scheduleIdleMascot()
   }
+}
+
+function clearIdleTimers() {
+  window.clearTimeout(idleTimer)
+  window.clearTimeout(sleepyTimer)
+  window.clearTimeout(surprisedTimer)
+  idleTimer = undefined
+  sleepyTimer = undefined
+  surprisedTimer = undefined
+}
+
+function resetIdleMascot() {
+  clearIdleTimers()
+  idleMascotMood.value = 'default'
+}
+
+function scheduleIdleMascot() {
+  clearIdleTimers()
+
+  if (isListening.value || isProcessing.value || micError.value) return
+
+  idleTimer = window.setTimeout(() => {
+    if (isListening.value || isProcessing.value || micError.value) return
+
+    idleMascotMood.value = 'sleepy'
+    sleepyTimer = window.setTimeout(() => {
+      idleMascotMood.value = 'surprised'
+
+      surprisedTimer = window.setTimeout(() => {
+        idleMascotMood.value = 'default'
+        scheduleIdleMascot()
+      }, 1100)
+    }, 3600)
+  }, 10000)
 }
 
 function mapGetUserMediaError(error: unknown): string {
@@ -159,18 +208,24 @@ function closeAudioGraph() {
 }
 
 function goTextInput() {
+  resetIdleMascot()
   void router.push(routePaths.input)
 }
 
 function goFraudWarning() {
+  resetIdleMascot()
   void router.push(routePaths.fraudWarning)
 }
 
 onMounted(() => {
   consultationFlow.reset()
+  scheduleIdleMascot()
 })
 
-onBeforeUnmount(closeAudioGraph)
+onBeforeUnmount(() => {
+  clearIdleTimers()
+  closeAudioGraph()
+})
 </script>
 
 <template>
@@ -186,8 +241,12 @@ onBeforeUnmount(closeAudioGraph)
             aria-hidden="true"
           ></span>
           <div class="home__brand-copy">
-            <h1 class="home__brand-name">어부바</h1>
-            <p class="home__brand-tagline">은행 업무를 도와드려요</p>
+            <h1 class="home__brand-name" aria-label="어부바">
+              <span class="home__brand-initial home__brand-initial--eo">어</span>
+              <span class="home__brand-initial home__brand-initial--bu">부</span>
+              <span class="home__brand-initial home__brand-initial--ba">바</span>
+            </h1>
+            <p class="home__brand-tagline">어르신 부담 바로덜기</p>
           </div>
         </div>
       </header>
@@ -211,19 +270,24 @@ onBeforeUnmount(closeAudioGraph)
                 ? '잠시만 기다려주세요'
                 : isListening
                   ? '끝나면 다시 눌러주세요'
-                  : '마이크를 누르고 편하게 말씀하세요'
+                  : '저를 눌러서 말씀해주세요'
             }}
           </p>
         </div>
 
-        <VoiceOrb
-          :state="voiceOrbState"
-          :media-stream="voiceMediaStream"
-          @toggle="handleVoiceStart"
-          @permission-denied="handleOrbPermissionDenied"
-        />
+        <div class="home__voice-stage">
+          <VoiceOrb
+            :state="voiceOrbState"
+            :mood="voiceOrbMood"
+            :media-stream="voiceMediaStream"
+            @toggle="handleVoiceStart"
+            @permission-denied="handleOrbPermissionDenied"
+          />
+        </div>
 
-        <small v-if="micError" class="home__hero-error">{{ micError }}</small>
+        <small class="home__hero-error" :class="{ 'home__hero-error--visible': micError }">
+          {{ micError || '음성 안내 상태' }}
+        </small>
         <div class="home__hero-bottom" aria-hidden="true"></div>
       </section>
 
@@ -288,10 +352,10 @@ onBeforeUnmount(closeAudioGraph)
   width: 52px;
   height: 52px;
   border-radius: var(--radius-pill);
-  background-color: var(--color-yellow-light);
+  background-color: transparent;
   background-repeat: no-repeat;
   background-position: center;
-  background-size: 58% auto;
+  background-size: contain;
 }
 
 .home__brand-copy {
@@ -300,10 +364,30 @@ onBeforeUnmount(closeAudioGraph)
 
 .home__brand-name {
   color: var(--color-ink);
-  font-family: var(--font-body);
+  font-family: 'JalnanGothic', 'Cafe24Ssurround', 'Noto Sans KR', 'Malgun Gothic', sans-serif;
   font-size: var(--text-2xl);
-  font-weight: 800;
-  line-height: 1.2;
+  font-weight: 950;
+  line-height: 1.12;
+  letter-spacing: 0;
+  word-break: keep-all;
+  font-variation-settings: 'wght' 900;
+}
+
+.home__brand-initial {
+  display: inline-block;
+  font-weight: 950;
+}
+
+.home__brand-initial--eo {
+  color: var(--color-ink);
+}
+
+.home__brand-initial--bu {
+  color: var(--color-ink);
+}
+
+.home__brand-initial--ba {
+  color: var(--color-ink);
 }
 
 .home__brand-tagline {
@@ -386,10 +470,32 @@ onBeforeUnmount(closeAudioGraph)
   font-weight: 600;
 }
 
+.home__voice-stage {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: min(72vw, 282px);
+  height: min(72vw, 282px);
+}
+
 .home__hero-error {
+  min-height: 20px;
   color: var(--color-accent-deep);
   font-size: var(--text-sm);
   font-weight: 700;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-2px);
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease,
+    visibility 0.18s ease;
+}
+
+.home__hero-error--visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
 }
 
 .quick-actions {
@@ -479,4 +585,5 @@ onBeforeUnmount(closeAudioGraph)
     font-size: var(--text-lg);
   }
 }
+
 </style>

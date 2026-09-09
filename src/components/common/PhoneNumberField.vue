@@ -10,12 +10,14 @@ withDefaults(
     helperText?: string
     errorMessage?: string
     disabled?: boolean
+    showLabel?: boolean
   }>(),
   {
     label: '휴대폰 번호',
     helperText: '',
     errorMessage: '',
     disabled: false,
+    showLabel: true,
   },
 )
 
@@ -33,7 +35,7 @@ function handleInput(event: Event) {
 
 <template>
   <label class="phone-field" :for="id">
-    <span class="phone-field__label">{{ label }}</span>
+    <span v-if="showLabel" class="phone-field__label">{{ label }}</span>
     <span class="phone-field__row" :class="{ 'phone-field__row--error': errorMessage }">
       <span class="phone-field__prefix" aria-hidden="true">010-</span>
       <input
@@ -66,10 +68,16 @@ function handleInput(event: Event) {
   border: 1px solid var(--color-line);
   border-radius: var(--radius-md);
   background: var(--color-surface);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
 }
 
 .phone-field:focus-within {
   border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px rgba(255, 188, 0, 0.1);
+  transform: translateY(-1px);
 }
 
 .phone-field__label {
@@ -102,6 +110,9 @@ function handleInput(event: Event) {
   font-size: var(--text-xl);
   font-weight: 800;
   text-align: left;
+  transition:
+    color 0.2s ease,
+    opacity 0.2s ease;
 }
 
 .phone-field__input::placeholder {
